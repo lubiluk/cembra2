@@ -1,3 +1,9 @@
 [submodule "gym_pepper"]
 	path = gym_pepper
 	url = https://github.com/lubiluk/gym_pepper.git
+[submodule "gym-pepper"]
+	path = gym-pepper
+	url = https://github.com/lubiluk/gym-pepper.git
+[submodule "spinningup"]
+	path = spinningup
+	url = https://github.com/lubiluk/spinningup.git
