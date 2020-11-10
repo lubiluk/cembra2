@@ -1,0 +1,3 @@
+[submodule "gym_pepper"]
+	path = gym_pepper
+	url = https://github.com/lubiluk/gym_pepper.git
