@@ -1,4 +1,4 @@
-from spinup.algos.pytorch.ddpg_her.ddpg_her import ddpg_her
+from algos import ddpg_her
 import torch as th
 import gym
 import gym_pepper
