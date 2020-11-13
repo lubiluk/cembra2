@@ -4,7 +4,7 @@ import gym
 import gym_pepper
 
 
-def env_fn(): return gym.make('PepperPush-v0')
+def env_fn(): return gym.make('PepperPush-v0', sim_steps_per_action=10)
 
 
 ac_kwargs = dict(hidden_sizes=[128, 128], activation=th.nn.ReLU)
