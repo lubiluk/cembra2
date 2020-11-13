@@ -75,7 +75,8 @@ def ddpg_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
              polyak=0.995, pi_lr=1e-3, q_lr=1e-3, batch_size=100, start_steps=10000,
              update_after=1000, update_every=50, act_noise=0.1, num_test_episodes=10,
              max_ep_len=1000, logger_kwargs=dict(), save_freq=1,
-             num_additional_goals=1, goal_selection_strategy='final', demos=[]):
+             num_additional_goals=1, goal_selection_strategy='final', 
+             demos=[], demo_actions=[], demo_actions_repeat=0):
     """
     Deep Deterministic Policy Gradient (DDPG) with Hindsight Experience Repley (HER)
 
@@ -171,8 +172,7 @@ def ddpg_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    env = env_fn()
-    test_env = env
+    env, test_env = env_fn(), env_fn()
 
     obs_dim = env.observation_space.spaces["observation"].shape
     act_dim = env.action_space.shape[0]
@@ -362,7 +362,10 @@ def ddpg_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         # Until start_steps have elapsed, randomly sample actions
         # from a uniform distribution for better exploration. Afterwards,
         # use the learned policy (with some noise, via act_noise).
-        if t > start_steps:
+        if t < len(demo_actions * demo_actions_repeat):
+            a = demo_actions[t % len(demo_actions)]
+            dr = t % len(demo_actions) == 0 if t > 0 else False
+        elif t > start_steps:
             # Concatenate observation with desired goal
             odg = np.concatenate([o, dg], axis=-1)
             a = get_action(odg, act_noise)
@@ -391,7 +394,7 @@ def ddpg_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         dg = dg2
 
         # End of trajectory handling
-        if d or (ep_len == max_ep_len):
+        if d or (ep_len == max_ep_len) or dr:
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             generate_additional_experience(env, ep_start_ptr=ep_start_ptr, ep_len=ep_len,
                                            replay_buffer=replay_buffer, num=num_additional_goals,
