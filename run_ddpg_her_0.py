@@ -1,4 +1,4 @@
-runninfrom algos.test_policy import load_policy_and_env, run_policy
+from algos.test_policy import load_policy_and_env, run_policy
 import gym
 import gym_pepper
 

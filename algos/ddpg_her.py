@@ -278,7 +278,7 @@ def ddpg_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         return np.clip(a, -act_limit, act_limit)
 
     def test_agent():
-        for j in range(num_test_episodes):
+        for _ in range(num_test_episodes):
             o_dict, d, ep_ret, ep_len = test_env.reset(), False, 0, 0
             o = o_dict["observation"]
             g = o_dict["desired_goal"]

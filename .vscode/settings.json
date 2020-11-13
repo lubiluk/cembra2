@@ -1,3 +1,6 @@
 {
-    "python.pythonPath": ".venv/bin/python"
+    "python.pythonPath": ".venv/bin/python",
+    "python.linting.pylintArgs": [
+        "--generated-members", "torch.* numpy.* pybullet.* qibullet.* numpy.random.*"
+    ]
 }
