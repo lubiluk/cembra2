@@ -53,11 +53,20 @@ recorded_actions = [
     [0.01, -1.0, 0, 0, 0, 0, 0, 0, 0.0, 0, 1.0],
 ]
 
+# For debugging only
+# envs = iter([
+#     gym.make('PepperPush-v0', sim_steps_per_action=10, gui=True),
+#     gym.make('PepperPush-v0', sim_steps_per_action=10)
+# ])
 
-def env_fn(): return gym.make('PepperPush-v0', sim_steps_per_action=10)
 
+# def env_fn(): 
+#     return next(envs)
 
-ac_kwargs = dict(hidden_sizes=[128, 128], activation=th.nn.ReLU)
+def env_fn():
+    return gym.make('PepperPush-v0', sim_steps_per_action=10)
+
+ac_kwargs = dict(hidden_sizes=[128, 128, 128], activation=th.nn.ReLU)
 
 logger_kwargs = dict(
     output_dir='data/pepper_push_ddpg_her_0',
