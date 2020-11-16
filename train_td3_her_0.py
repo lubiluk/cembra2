@@ -5,17 +5,17 @@ import gym_pepper
 
 
 # For debugging only
-envs = iter([
-    gym.make('PepperPush-v0', sim_steps_per_action=10, gui=True),
-    gym.make('PepperPush-v0', sim_steps_per_action=10)
-])
+# envs = iter([
+#     gym.make('PepperPush-v0', sim_steps_per_action=10, gui=True),
+#     gym.make('PepperPush-v0', sim_steps_per_action=10)
+# ])
 
 
-def env_fn(): 
-    return next(envs)
+# def env_fn(): 
+#     return next(envs)
 
-# def env_fn():
-#     return gym.make('PepperPush-v0', sim_steps_per_action=10)
+def env_fn():
+    return gym.make('PepperPush-v0', sim_steps_per_action=10)
 
 ac_kwargs = dict(hidden_sizes=[256, 256, 256], activation=th.nn.ReLU)
 
