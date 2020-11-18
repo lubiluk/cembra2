@@ -2,20 +2,21 @@ from algos import td3_her
 import torch as th
 import gym
 import gym_pepper
+from algos import norm_ac
 
 
 # For debugging only
-envs = iter([
-    gym.make('PepperPush-v0', sim_steps_per_action=10, gui=True),
-    gym.make('PepperPush-v0', sim_steps_per_action=10)
-])
+# envs = iter([
+#     gym.make('PepperPush-v0', sim_steps_per_action=10, gui=True),
+#     gym.make('PepperPush-v0', sim_steps_per_action=10)
+# ])
 
 
-def env_fn(): 
-    return next(envs)
+# def env_fn(): 
+#     return next(envs)
 
-# def env_fn():
-#     return gym.make('PepperPush-v0', sim_steps_per_action=10)
+def env_fn():
+    return gym.make('PepperPush-v0', sim_steps_per_action=10)
 
 ac_kwargs = dict(hidden_sizes=[256, 256, 128, 64], activation=th.nn.ReLU)
 
@@ -26,6 +27,7 @@ logger_kwargs = dict(
 td3_her(
     env_fn=env_fn,
     ac_kwargs=ac_kwargs,
+    actor_critic=norm_ac.MLPActorCritic,
     steps_per_epoch=15000,
     max_ep_len=300,
     epochs=200,
