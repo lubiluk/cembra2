@@ -21,8 +21,8 @@ def env_fn():
 ac_kwargs = dict(hidden_sizes=[256, 256, 128, 64], activation=th.nn.ReLU)
 
 logger_kwargs = dict(
-    output_dir='data/pepper_push_td3_her_0',
-    exp_name='pepper_push_td3_her_0')
+    output_dir='data/pepper_push_td3_her_1',
+    exp_name='pepper_push_td3_her_1')
 
 td3_her(
     env_fn=env_fn,
