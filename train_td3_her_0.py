@@ -17,7 +17,7 @@ import gym_pepper
 def env_fn():
     return gym.make('PepperPush-v0', sim_steps_per_action=10)
 
-ac_kwargs = dict(hidden_sizes=[256, 256, 256], activation=th.nn.ReLU)
+ac_kwargs = dict(hidden_sizes=[256, 256, 128, 64], activation=th.nn.ReLU)
 
 logger_kwargs = dict(
     output_dir='data/pepper_push_td3_her_0',
@@ -27,11 +27,10 @@ td3_her(
     env_fn=env_fn,
     ac_kwargs=ac_kwargs,
     steps_per_epoch=15000,
+    max_ep_len=300,
     epochs=200,
     batch_size=256,
     replay_size=1000000,
-    start_steps=0,
-    update_after=0,
     gamma=0.95,
     q_lr=0.001,
     pi_lr=0.001,
