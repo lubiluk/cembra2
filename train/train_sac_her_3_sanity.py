@@ -1,8 +1,7 @@
-from algos import sac_her
-import torch as th
 import gym
-
-
+import torch as th
+from algos import sac_her
+from utils import wrappers
 
 # For debugging only
 # envs = iter([
@@ -15,7 +14,7 @@ import gym
 #     return next(envs)
 
 def env_fn():
-    return gym.make('FetchPush-v1')
+    return wrappers.DoneOnSuccessWrapper(gym.make('FetchPush-v1'))
 
 ac_kwargs = dict(hidden_sizes=[64, 64], activation=th.nn.ReLU)
 
