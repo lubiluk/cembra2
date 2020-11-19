@@ -15,6 +15,6 @@ cd $SLURM_SUBMIT_DIR
 
 module load plgrid/tools/python/3.7
 
-cd ..
+cd ~/Code/cembra2
 source .venv/bin/activate
-python train_sac_her_1.py
+python -m train.train_sac_her_1

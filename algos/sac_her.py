@@ -362,7 +362,8 @@ def sac_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     start_time = time.time()
     o_dict, ep_ret, ep_len = env.reset(), 0, 0
     ep_start_ptr = replay_buffer.ptr
-
+    dd = False
+    
     o = o_dict["observation"]
     dg = o_dict["desired_goal"]
 
