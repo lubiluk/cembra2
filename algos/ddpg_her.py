@@ -75,7 +75,7 @@ def ddpg_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
              polyak=0.995, pi_lr=1e-3, q_lr=1e-3, batch_size=100, start_steps=10000,
              update_after=1000, update_every=50, act_noise=0.1, num_test_episodes=10,
              max_ep_len=1000, logger_kwargs=dict(), save_freq=1,
-             num_additional_goals=1, goal_selection_strategy='final', 
+             num_additional_goals=1, goal_selection_strategy='final',
              demos=[], demo_actions=[], demo_actions_repeat=0):
     """
     Deep Deterministic Policy Gradient (DDPG) with Hindsight Experience Repley (HER)

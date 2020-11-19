@@ -19,7 +19,7 @@ model = HER('MlpPolicy',
             gamma=0.95,
             goal_selection_strategy='future',
             ent_coef='auto',
-            policy_kwargs = dict(activation_fn=th.nn.ReLU, net_arch=[256, 256, 128, 64]),
+            policy_kwargs = dict(activation_fn=th.nn.ReLU, net_arch=[256, 256, 256]),
             train_freq=1,
             tensorboard_log="./data/pepper_push_sac_her_1_tensorboard/"
             )

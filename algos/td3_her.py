@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from copy import deepcopy
 import itertools
 import numpy as np
@@ -76,7 +78,8 @@ def td3_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         update_after=1000, update_every=50, act_noise=0.1, target_noise=0.2, 
         noise_clip=0.5, policy_delay=2, num_test_episodes=10, max_ep_len=1000, 
         logger_kwargs=dict(), save_freq=1,
-        num_additional_goals=1, goal_selection_strategy='final'):
+        num_additional_goals=1, goal_selection_strategy='final',
+        demos=[], demo_actions=[], demo_actions_repeat=0):
     """
     Twin Delayed Deep Deterministic Policy Gradient (TD3)
 
@@ -369,11 +372,14 @@ def td3_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     # Main loop: collect experience in env and update/log each epoch
     for t in range(total_steps):
-        
-        # Until start_steps have elapsed, randomly sample actions
-        # from a uniform distribution for better exploration. Afterwards, 
-        # use the learned policy (with some noise, via act_noise). 
-        if t > start_steps:
+        # First, use given demo actions
+        if t < len(demo_actions * demo_actions_repeat):
+            a = demo_actions[t % len(demo_actions)]
+            dd = t % len(demo_actions) == 0 if t > 0 else False
+        elif t > start_steps:
+            # Until start_steps have elapsed, randomly sample actions
+            # from a uniform distribution for better exploration. Afterwards, 
+            # use the learned policy (with some noise, via act_noise). 
             # Concatenate observation with desired goal
             odg = np.concatenate([o, dg], axis=-1)
             a = get_action(odg, act_noise)
@@ -402,7 +408,7 @@ def td3_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         dg = dg2
 
         # End of trajectory handling
-        if d or (ep_len == max_ep_len):
+        if d or (ep_len == max_ep_len) or dd:
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             synthesize_experience(env, ep_start_ptr=ep_start_ptr, ep_len=ep_len,
                                     replay_buffer=replay_buffer, num=num_additional_goals,

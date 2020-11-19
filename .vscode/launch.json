@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: Module",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "module": "train.train_td3_her_1",
             "console": "integratedTerminal"
         }
     ]
