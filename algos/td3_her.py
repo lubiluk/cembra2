@@ -79,9 +79,10 @@ def td3_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         noise_clip=0.5, policy_delay=2, num_test_episodes=10, max_ep_len=1000, 
         logger_kwargs=dict(), save_freq=1,
         num_additional_goals=1, goal_selection_strategy='final',
-        demos=[], demo_actions=[], demo_actions_repeat=0):
+        demo_actions=[], demo_actions_repeat=0):
     """
-    Twin Delayed Deep Deterministic Policy Gradient (TD3)
+    Twin Delayed Deep Deterministic Policy Gradient (TD3) 
+        with Hindsight Experience Repley (HER)
 
 
     Args:
@@ -417,6 +418,7 @@ def td3_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             o_dict, ep_ret, ep_len = env.reset(), 0, 0
             o = o_dict["observation"]
             dg = o_dict["desired_goal"]
+            dd = False
 
         # Update handling
         if t >= update_after and t % update_every == 0:
