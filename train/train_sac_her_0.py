@@ -8,7 +8,7 @@ env = gym.make('PepperPush-v0', sim_steps_per_action=10)
 model = HER('MlpPolicy',
             env,
             SAC,
-            online_sampling=True,
+            online_sampling=False,
             verbose=1,
             max_episode_length=400,
             buffer_size=1000000,
