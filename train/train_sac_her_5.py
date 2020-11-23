@@ -2,15 +2,16 @@ from stable_baselines3 import HER, SAC
 import gym
 import gym_pepper
 import torch as th
+from gym.wrappers.time_limit import TimeLimit
 
-env = gym.make('PepperPush-v0')
+env = TimeLimit(gym.make('PepperPush-v0'), max_episode_steps=100)
 
 model = HER('MlpPolicy',
             env,
             SAC,
             online_sampling=False,
             verbose=1,
-            max_episode_length=300,
+            max_episode_length=100,
             buffer_size=1000000,
             batch_size=256,
             learning_rate=0.001,
