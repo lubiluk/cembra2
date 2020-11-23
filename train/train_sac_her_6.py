@@ -24,7 +24,7 @@ model = HER('MlpPolicy',
             tensorboard_log="./data/pepper_push_sac_her_6_tensorboard/"
             )
 # Train the model
-model.learn(3000000)
+model.learn(6000000)
 
 model.save("./data/pepper_push_sac_her_6")
 
