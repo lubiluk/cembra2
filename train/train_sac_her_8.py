@@ -79,7 +79,7 @@ sac_her(
     env_fn=env_fn,
     ac_kwargs=ac_kwargs,
     steps_per_epoch=15000,
-    max_ep_len=300,
+    max_ep_len=100,
     epochs=1000,
     batch_size=256,
     replay_size=1000000,
