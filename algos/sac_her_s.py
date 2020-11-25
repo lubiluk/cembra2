@@ -366,7 +366,7 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
 
                 sel_agoal = ep['agoal'][sel_idx]
 
-                if sel_agoal != agoal:
+                if not np.allclose(sel_agoal, agoal, rtol=0, atol=1e-4):
                     rew = env.compute_reward(agoal, sel_agoal, info)
                     replay_buffer.store(obs, act, rew, obs2, False, sel_agoal, agoal, info)
 
