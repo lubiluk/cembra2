@@ -79,7 +79,7 @@ def td3_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         noise_clip=0.5, policy_delay=2, num_test_episodes=10, max_ep_len=1000, 
         logger_kwargs=dict(), save_freq=1,
         num_additional_goals=1, goal_selection_strategy='final',
-        demo_actions=[], demo_actions_repeat=0):
+        demo_actions=[], demo_actions_repeat=0, num_updates=None):
     """
     Twin Delayed Deep Deterministic Policy Gradient (TD3) 
         with Hindsight Experience Repley (HER)
@@ -181,6 +181,8 @@ def td3_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
         goal_selection_strategy (final, future, episode, random): Goal selection
             method for HER goal generation.
+
+        num_updates (int): number of updates per `update_every`
 
     """
 
@@ -422,7 +424,7 @@ def td3_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
         # Update handling
         if t >= update_after and t % update_every == 0:
-            for j in range(update_every):
+            for j in range(num_updates or update_every):
                 batch = replay_buffer.sample_batch(batch_size)
                 og_batch = dict(
                     obs=torch.as_tensor(

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from algos import sac_her_s
+from algos import td3_her
 import torch as th
 import gym
 import gym_pepper
@@ -69,26 +69,27 @@ recorded_actions = [
 def env_fn():
     return gym.make('PepperPush-v0', sim_steps_per_action=10)
 
-ac_kwargs = dict(hidden_sizes=[256, 256, 256], activation=th.nn.ReLU)
+ac_kwargs = dict(hidden_sizes=[256, 256, 128, 64], activation=th.nn.ReLU)
 
 logger_kwargs = dict(
-    output_dir='data/pepper_push_sac_her_s_9',
-    exp_name='pepper_push_sac_her_s_9')
+    output_dir='data/pepper_push_td3_her_2',
+    exp_name='pepper_push_td3_her_2')
 
-sac_her_s(
+td3_her(
     env_fn=env_fn,
     ac_kwargs=ac_kwargs,
     steps_per_epoch=15000,
-    max_ep_len=100,
+    max_ep_len=300,
     epochs=200,
     batch_size=256,
     replay_size=1000000,
     gamma=0.95,
-    lr=0.001,
-    update_after=10000,
+    q_lr=0.001,
+    pi_lr=0.001,
+    update_after=1000,
     update_every=1,
-    num_additional_goals=10,
-    goal_selection_strategy='future',
+    num_additional_goals=1,
+    goal_selection_strategy='final',
     logger_kwargs=logger_kwargs,
     demo_actions=recorded_actions,
     demo_actions_repeat=10000)
