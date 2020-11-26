@@ -23,10 +23,10 @@ model = HER('MlpPolicy',
             goal_selection_strategy='future',
             ent_coef='auto',
             policy_kwargs = dict(activation_fn=th.nn.ReLU, net_arch=[512, 512, 512, 512, 512]),
-            tensorboard_log="./data/pepper_push_sac_her_6_tensorboard/"
+            tensorboard_log="./data/pepper_push_sac_her_7_tensorboard/"
             )
 # Train the model
 model.learn(6000000)
 
-model.save("./data/pepper_push_sac_her_6")
+model.save("./data/pepper_push_sac_her_7")
 
