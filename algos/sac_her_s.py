@@ -7,6 +7,7 @@ import gym
 import time
 from . import core_sac as core
 from .logx import EpochLogger
+import h5py
 
 
 class ReplayBuffer:
@@ -77,7 +78,7 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
         update_after=1000, update_every=50, num_test_episodes=10, max_ep_len=1000, 
         logger_kwargs=dict(), save_freq=1,
         num_additional_goals=1, goal_selection_strategy='final',
-        demo_actions=[], demo_actions_repeat=0):
+        demo_actions=[], demo_actions_repeat=0, demos=[]):
     """
     Soft Actor-Critic (SAC) with Hindsight Experience Repley (HER)
 
@@ -340,6 +341,9 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
             agoal = ep['agoal'][idx]
             info = ep['info'][idx]
 
+            low_agoal = agoal - 1e-4
+            high_agoal = agoal + 1e-4
+
             for _ in range(num):
                 if selection_strategy == 'final':
                     sel_idx = -1
@@ -348,14 +352,16 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
                     if idx == ep_end - 1:
                         break
 
-                    dif_idxs = np.nonzero(ep['agoal'][idx+1:ep_end] != agoal)[0]
+                    a = ep['agoal'][idx+1:ep_end]
+                    dif_idxs = np.nonzero((a < low_agoal) | (a > high_agoal))[0]
 
                     if dif_idxs.size == 0:
                         break
 
                     sel_idx = np.random.choice(dif_idxs)
                 elif selection_strategy == 'episode':
-                    dif_idxs = np.nonzero(ep['agoal'][:ep_end] != agoal)[0]
+                    a = ep['agoal'][:ep_end]
+                    dif_idxs = np.nonzero((a < low_agoal) | (a > high_agoal))[0]
 
                     if dif_idxs.size == 0:
                         break
@@ -369,6 +375,52 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
                 if not np.allclose(sel_agoal, agoal, rtol=0, atol=1e-4):
                     rew = env.compute_reward(agoal, sel_agoal, info)
                     replay_buffer.store(obs, act, rew, obs2, False, sel_agoal, agoal, info)
+
+    def load_demo_experience(demos, replay_buffer, num_additional_goals, goal_selection_strategy='final'):
+        for df in demos:
+            with h5py.File(df, "r") as f:
+                obs = f['obs']
+                obs2 = f['obs2']
+                act = f['act']
+                rew = f['rew']
+                done = f['done']
+                dgoal = f['dgoal']
+                agoal = f['agoal']
+                ep_len = len(obs)
+
+                ep_start_ptr = replay_buffer.ptr
+
+                for i in range(ep_len):
+                    replay_buffer.store(
+                        obs[i], act[i], rew[i], obs2[i], done[i], dgoal[i], agoal[i], {})
+
+                synthesize_experience(env, ep_start_ptr=ep_start_ptr, ep_len=ep_len,
+                                               replay_buffer=replay_buffer, num=num_additional_goals,
+                                               selection_strategy=goal_selection_strategy)
+
+    # Preload experience from demos
+    load_demo_experience(
+        demos, replay_buffer, num_additional_goals=num_additional_goals, goal_selection_strategy=goal_selection_strategy)
+
+
+    if demos:
+        # update a bunch of times from demos
+        for _ in range(len(demos) * 100):
+            batch = replay_buffer.sample_batch(batch_size)
+            og_batch = dict(
+                obs=torch.as_tensor(
+                    np.concatenate(
+                        [batch['obs'], batch['dgoal']], axis=-1),
+                    dtype=torch.float32),
+                obs2=torch.as_tensor(
+                    np.concatenate(
+                        [batch['obs2'], batch['dgoal']], axis=-1),
+                    dtype=torch.float32),
+                act=torch.as_tensor(batch['act'], dtype=torch.float32),
+                rew=torch.as_tensor(batch['rew'], dtype=torch.float32),
+                done=torch.as_tensor(batch['done'], dtype=torch.float32)
+            )
+            update(data=og_batch)
 
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs

@@ -348,6 +348,26 @@ def ddpg_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     load_demo_experience(
         demos, replay_buffer, num_additional_goals=num_additional_goals, goal_selection_strategy='final')
 
+
+    if demos:
+        # update a bunch of times from demos
+        for _ in range(len(demos) * 1000):
+            batch = replay_buffer.sample_batch(batch_size)
+            og_batch = dict(
+                obs=torch.as_tensor(
+                    np.concatenate(
+                        [batch['obs'], batch['dgoal']], axis=-1),
+                    dtype=torch.float32),
+                obs2=torch.as_tensor(
+                    np.concatenate(
+                        [batch['obs2'], batch['dgoal']], axis=-1),
+                    dtype=torch.float32),
+                act=torch.as_tensor(batch['act'], dtype=torch.float32),
+                rew=torch.as_tensor(batch['rew'], dtype=torch.float32),
+                done=torch.as_tensor(batch['done'], dtype=torch.float32)
+            )
+            update(data=og_batch)
+
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs
     start_time = time.time()
