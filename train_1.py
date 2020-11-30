@@ -4,7 +4,7 @@ import gym_pepper
 import torch as th
 from gym.wrappers.time_limit import TimeLimit
 
-env = TimeLimit(gym.make('PepperArmVelPush-v0', gui=True), max_episode_steps=100)
+env = TimeLimit(gym.make('PepperArmVelPush-v0'), max_episode_steps=100)
 
 model = HER('MlpPolicy',
             env,
