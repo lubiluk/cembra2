@@ -22,10 +22,10 @@ model = HER('MlpPolicy',
             ent_coef='auto',
             policy_kwargs = dict(activation_fn=th.nn.ReLU, net_arch=[64, 64, 64]),
             train_freq=1,
-            tensorboard_log="./data/3_tensorboard/"
+            tensorboard_log="./data/4_tensorboard/"
             )
 # Train the model
 model.learn(3000000)
 
-model.save("./data/3")
+model.save("./data/4")
 
