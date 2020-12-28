@@ -1,8 +1,8 @@
-from stable_baselines3 import HER, SAC
 import gym
 import gym_pepper
 import torch as th
 from gym.wrappers.time_limit import TimeLimit
+from stable_baselines3 import HER, SAC
 
 env = TimeLimit(gym.make('PepperPush-v0'), max_episode_steps=100)
 
@@ -20,12 +20,12 @@ model = HER('MlpPolicy',
             gamma=0.95,
             goal_selection_strategy='future',
             ent_coef='auto',
-            policy_kwargs = dict(activation_fn=th.nn.ReLU, net_arch=[256, 256]),
+            policy_kwargs = dict(activation_fn=th.nn.ReLU, net_arch=[256, 256, 256]),
             train_freq=1,
             tensorboard_log="./data/0_tensorboard/"
             )
 # Train the model
-model.learn(3000000)
+model.learn(1000000)
 
 model.save("./data/0")
 
