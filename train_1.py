@@ -8,7 +8,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from utils.pepper_preprocessing import PepperPreprocessing
 
 env = PepperPreprocessing(
-    TimeLimit(gym.make("PepperReachCam-v0"), max_episode_steps=100)
+    TimeLimit(gym.make("PepperReachCam-v0", gui=False), max_episode_steps=100)
 )
 
 
@@ -20,45 +20,93 @@ class CustomCNN(BaseFeaturesExtractor):
     """
 
     def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 256):
-        super(CustomCNN, self).__init__(observation_space, features_dim)
+        super(CustomCNN, self).__init__(observation_space, features_dim * 3 + 18)
         # We assume CxHxW images (channels first)
         # Re-ordering will be done by pre-preprocessing or wrapper
-        n_input_channels = observation_space.shape[0]
-        self.cnn = nn.Sequential(
-            nn.Conv2d(n_input_channels, 32, kernel_size=1, stride=1, padding=0),
+
+        # Top camera
+        self.top_cnn = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=8, stride=4, padding=0),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        self.bottom_cnn = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=8, stride=4, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        self.depth_cnn = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=8, stride=4, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
             nn.ReLU(),
             nn.Flatten(),
         )
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            n_flatten = self.cnn(
-                th.as_tensor(observation_space.sample()[None]).float()
-            ).shape[1]
+            obs = observation_space.sample()[None]
 
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+            top_cam_obs = env.get_top_camera_obs(obs)
+            bottom_cam_obs = env.get_bottom_camera_obs(obs)
+            depth_cam_obs = env.get_depth_camera_obs(obs)
+
+            top_n_flatten = self.top_cnn(th.as_tensor(top_cam_obs).float()).shape[1]
+            bottom_n_flatten = self.bottom_cnn(
+                th.as_tensor(bottom_cam_obs).float()
+            ).shape[1]
+            depth_n_flatten = self.depth_cnn(th.as_tensor(depth_cam_obs).float()).shape[
+                1
+            ]
+
+        self.top_linear = nn.Sequential(
+            nn.Linear(top_n_flatten, features_dim), nn.ReLU()
+        )
+        self.bottom_linear = nn.Sequential(
+            nn.Linear(bottom_n_flatten, features_dim), nn.ReLU()
+        )
+        self.depth_linear = nn.Sequential(
+            nn.Linear(depth_n_flatten, features_dim), nn.ReLU()
+        )
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
-        return self.linear(self.cnn(observations))
+        top = self.top_linear(
+            self.top_cnn(th.as_tensor(env.get_top_camera_obs(observations)).float())
+        )
+        bottom = self.bottom_linear(
+            self.bottom_cnn(th.as_tensor(env.get_bottom_camera_obs(observations)).float())
+        )
+        depth = self.depth_linear(
+            self.depth_cnn(th.as_tensor(env.get_depth_camera_obs(observations)).float())
+        )
+        joints = th.as_tensor(env.get_joints_state_obs(observations)).float()
+
+        cat = th.cat((top, bottom, depth, joints), dim=1)
+
+        return cat
 
 
 policy_kwargs = dict(
     features_extractor_class=CustomCNN,
     features_extractor_kwargs=dict(features_dim=128),
     activation_fn=th.nn.ReLU,
-    net_arch=[256, 256, 256],
+    net_arch=[256, 256, 256]
 )
 
 model = SAC(
     "MlpPolicy",
     env,
     verbose=1,
-    buffer_size=1000000,
-    batch_size=256,
+    buffer_size=1000,
+    batch_size=10,
     learning_rate=0.001,
-    learning_starts=1000,
+    learning_starts=10,
     gamma=0.95,
     ent_coef="auto",
     policy_kwargs=policy_kwargs,
@@ -67,6 +115,6 @@ model = SAC(
 )
 
 
-model.learn(1000)
+model.learn(10000)
 
 model.save("./data/1")
