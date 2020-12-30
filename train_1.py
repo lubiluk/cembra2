@@ -51,19 +51,15 @@ class CustomCNN(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            obs = observation_space.sample()[None]
+            obs = th.as_tensor(observation_space.sample()[None]).float()
 
-            top_cam_obs = env.get_top_camera_obs(obs)
-            bottom_cam_obs = env.get_bottom_camera_obs(obs)
-            depth_cam_obs = env.get_depth_camera_obs(obs)
+            top_cam_obs = self._get_top_camera_obs(obs)
+            bottom_cam_obs = self._get_bottom_camera_obs(obs)
+            depth_cam_obs = self._get_depth_camera_obs(obs)
 
-            top_n_flatten = self.top_cnn(th.as_tensor(top_cam_obs).float()).shape[1]
-            bottom_n_flatten = self.bottom_cnn(
-                th.as_tensor(bottom_cam_obs).float()
-            ).shape[1]
-            depth_n_flatten = self.depth_cnn(th.as_tensor(depth_cam_obs).float()).shape[
-                1
-            ]
+            top_n_flatten = self.top_cnn(top_cam_obs).shape[1]
+            bottom_n_flatten = self.bottom_cnn(bottom_cam_obs).shape[1]
+            depth_n_flatten = self.depth_cnn(depth_cam_obs).shape[1]
 
         self.top_linear = nn.Sequential(
             nn.Linear(top_n_flatten, features_dim), nn.ReLU()
@@ -77,26 +73,40 @@ class CustomCNN(BaseFeaturesExtractor):
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         top = self.top_linear(
-            self.top_cnn(th.as_tensor(env.get_top_camera_obs(observations)).float())
+            self.top_cnn(self._get_top_camera_obs(observations))
         )
         bottom = self.bottom_linear(
-            self.bottom_cnn(th.as_tensor(env.get_bottom_camera_obs(observations)).float())
+            self.bottom_cnn(
+                self._get_bottom_camera_obs(observations)
+            )
         )
         depth = self.depth_linear(
-            self.depth_cnn(th.as_tensor(env.get_depth_camera_obs(observations)).float())
+            self.depth_cnn(self._get_depth_camera_obs(observations))
         )
-        joints = th.as_tensor(env.get_joints_state_obs(observations)).float()
+        joints = self._get_joints_state_obs(observations)
 
         cat = th.cat((top, bottom, depth, joints), dim=1)
 
         return cat
+
+    def _get_top_camera_obs(self, obs):
+        return obs[:,:3,:,:]
+
+    def _get_bottom_camera_obs(self, obs):
+        return obs[:,3:6,:,:]
+
+    def _get_depth_camera_obs(self, obs):
+        return obs[:,6,:,:].unsqueeze(dim=1)
+
+    def _get_joints_state_obs(self, obs):
+        return obs[:,7,:18,0]
 
 
 policy_kwargs = dict(
     features_extractor_class=CustomCNN,
     features_extractor_kwargs=dict(features_dim=128),
     activation_fn=th.nn.ReLU,
-    net_arch=[256, 256, 256]
+    net_arch=[256, 256, 256],
 )
 
 model = SAC(
