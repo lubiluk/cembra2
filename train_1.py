@@ -20,18 +20,9 @@ class CustomCNN(BaseFeaturesExtractor):
     """
 
     def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 256):
-        super(CustomCNN, self).__init__(observation_space, features_dim * 3 + 18)
+        super(CustomCNN, self).__init__(observation_space, features_dim + 18)
         # We assume CxHxW images (channels first)
         # Re-ordering will be done by pre-preprocessing or wrapper
-
-        # Top camera
-        self.top_cnn = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=8, stride=4, padding=0),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
 
         self.bottom_cnn = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=8, stride=4, padding=0),
@@ -41,65 +32,33 @@ class CustomCNN(BaseFeaturesExtractor):
             nn.Flatten(),
         )
 
-        self.depth_cnn = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=8, stride=4, padding=0),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
         # Compute shape by doing one forward pass
         with th.no_grad():
             obs = th.as_tensor(observation_space.sample()[None]).float()
-
-            top_cam_obs = self._get_top_camera_obs(obs)
             bottom_cam_obs = self._get_bottom_camera_obs(obs)
-            depth_cam_obs = self._get_depth_camera_obs(obs)
-
-            top_n_flatten = self.top_cnn(top_cam_obs).shape[1]
             bottom_n_flatten = self.bottom_cnn(bottom_cam_obs).shape[1]
-            depth_n_flatten = self.depth_cnn(depth_cam_obs).shape[1]
 
-        self.top_linear = nn.Sequential(
-            nn.Linear(top_n_flatten, features_dim), nn.ReLU()
-        )
         self.bottom_linear = nn.Sequential(
             nn.Linear(bottom_n_flatten, features_dim), nn.ReLU()
         )
-        self.depth_linear = nn.Sequential(
-            nn.Linear(depth_n_flatten, features_dim), nn.ReLU()
-        )
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
-        top = self.top_linear(
-            self.top_cnn(self._get_top_camera_obs(observations))
-        )
         bottom = self.bottom_linear(
             self.bottom_cnn(
                 self._get_bottom_camera_obs(observations)
             )
         )
-        depth = self.depth_linear(
-            self.depth_cnn(self._get_depth_camera_obs(observations))
-        )
         joints = self._get_joints_state_obs(observations)
 
-        cat = th.cat((top, bottom, depth, joints), dim=1)
+        cat = th.cat((bottom, joints), dim=1)
 
         return cat
 
-    def _get_top_camera_obs(self, obs):
+    def _get_bottom_camera_obs(self, obs):
         return obs[:,:3,:,:]
 
-    def _get_bottom_camera_obs(self, obs):
-        return obs[:,3:6,:,:]
-
-    def _get_depth_camera_obs(self, obs):
-        return obs[:,6,:,:].unsqueeze(dim=1)
-
     def _get_joints_state_obs(self, obs):
-        return obs[:,7,:18,0]
+        return obs[:,3,:18,0]
 
 
 policy_kwargs = dict(
@@ -113,7 +72,7 @@ model = SAC(
     "MlpPolicy",
     env,
     verbose=1,
-    buffer_size=10000,
+    buffer_size=1000,
     batch_size=256,
     learning_rate=0.001,
     learning_starts=1000,
