@@ -84,6 +84,6 @@ model = SAC(
 )
 
 
-model.learn(10000)
+model.learn(1000000)
 
 model.save("./data/1")
