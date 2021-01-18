@@ -5,7 +5,7 @@ from gym import spaces
 
 class PepperPreprocessing(gym.ObservationWrapper):
     def __init__(self, env, depth_camera=False, top_camera=False):
-        super().__init__(env)
+        super(PepperPreprocessing, self).__init__(env)
         self._depth_camera = depth_camera
         self._top_camera = top_camera
 
@@ -32,7 +32,7 @@ class PepperPreprocessing(gym.ObservationWrapper):
 
         if self._depth_camera:
             cam_depth = observation['camera_depth']
-            cam_dep_nom = cam_depth / 65_535 - 0.5
+            cam_dep_nom = cam_depth / 65535 - 0.5
             stack.insert(1, cam_depth)
 
         if self._top_camera:

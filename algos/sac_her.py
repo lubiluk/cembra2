@@ -351,7 +351,7 @@ def sac_her(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 elif selection_strategy == 'episode':
                     sel_idx = np.random.choice(np.arange(ep_end))
                 else:
-                    raise ValueError(f"Unsupported selection_strategy: {selection_strategy}")
+                    raise ValueError("Unsupported selection_strategy: {}".format(selection_strategy))
 
                 sel_agoal = ep['agoal'][sel_idx]
                 rew = env.compute_reward(agoal, sel_agoal, info)

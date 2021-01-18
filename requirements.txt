@@ -1,3 +1,5 @@
 gym==0.16.0
 -e ./gym-pepper
 torch==1.4.0
+joblib==0.14.1
+h5py==2.10.0

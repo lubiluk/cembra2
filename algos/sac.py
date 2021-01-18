@@ -7,80 +7,48 @@ import gym
 import time
 from . import core_sac as core
 from .logx import EpochLogger
-import h5py
 
 
 class ReplayBuffer:
     """
-    A simple FIFO experience replay buffer for DDPG agents.
+    A simple FIFO experience replay buffer for SAC agents.
     """
 
-    def __init__(self, obs_dim, act_dim, goal_dim, size):
-        self.obs_buf = np.zeros(core.combined_shape(
-            size, obs_dim), dtype=np.float32)
-        self.obs2_buf = np.zeros(core.combined_shape(
-            size, obs_dim), dtype=np.float32)
-        self.act_buf = np.zeros(core.combined_shape(
-            size, act_dim), dtype=np.float32)
+    def __init__(self, obs_dim, act_dim, size):
+        self.obs_buf = np.zeros(core.combined_shape(size, obs_dim), dtype=np.float32)
+        self.obs2_buf = np.zeros(core.combined_shape(size, obs_dim), dtype=np.float32)
+        self.act_buf = np.zeros(core.combined_shape(size, act_dim), dtype=np.float32)
         self.rew_buf = np.zeros(size, dtype=np.float32)
         self.done_buf = np.zeros(size, dtype=np.float32)
-        self.dgoal_buf = np.zeros(core.combined_shape(
-            size, goal_dim), dtype=np.float32)
-        self.agoal_buf = np.zeros(core.combined_shape(
-            size, goal_dim), dtype=np.float32)
-        self.info_buf = np.empty((size, 1), dtype=object)
         self.ptr, self.size, self.max_size = 0, 0, size
 
-    def store(self, obs, act, rew, next_obs, done, dgoal, agoal, info):
+    def store(self, obs, act, rew, next_obs, done):
         self.obs_buf[self.ptr] = obs
         self.obs2_buf[self.ptr] = next_obs
         self.act_buf[self.ptr] = act
         self.rew_buf[self.ptr] = rew
         self.done_buf[self.ptr] = done
-        self.dgoal_buf[self.ptr] = dgoal
-        self.agoal_buf[self.ptr] = agoal
-        self.info_buf[self.ptr] = info
         self.ptr = (self.ptr+1) % self.max_size
         self.size = min(self.size+1, self.max_size)
 
     def sample_batch(self, batch_size=32):
         idxs = np.random.randint(0, self.size, size=batch_size)
-        return dict(obs=self.obs_buf[idxs],
-                    obs2=self.obs2_buf[idxs],
-                    act=self.act_buf[idxs],
-                    rew=self.rew_buf[idxs],
-                    done=self.done_buf[idxs],
-                    dgoal=self.dgoal_buf[idxs],
-                    agoal=self.agoal_buf[idxs],
-                    info=self.info_buf[idxs])
-
-    def get_episode(self, ep_start_ptr, ep_len):
-        idxs = np.arange(ep_start_ptr, min(ep_start_ptr + ep_len, self.size))
-
-        if len(idxs) < ep_len:
-            idxs = np.concatenate([idxs, np.arange((ep_start_ptr + ep_len) % self.size)])
-
-        return dict(obs=self.obs_buf[idxs],
-                    obs2=self.obs2_buf[idxs],
-                    act=self.act_buf[idxs],
-                    rew=self.rew_buf[idxs],
-                    done=self.done_buf[idxs],
-                    dgoal=self.dgoal_buf[idxs],
-                    agoal=self.agoal_buf[idxs],
-                    info=self.info_buf[idxs])
+        batch = dict(obs=self.obs_buf[idxs],
+                     obs2=self.obs2_buf[idxs],
+                     act=self.act_buf[idxs],
+                     rew=self.rew_buf[idxs],
+                     done=self.done_buf[idxs])
+        return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in batch.items()}
 
 
 
-
-def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, 
+def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, 
         steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99, 
         polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=10000, 
         update_after=1000, update_every=50, num_test_episodes=10, max_ep_len=1000, 
-        logger_kwargs=dict(), save_freq=1,
-        num_additional_goals=1, goal_selection_strategy='final',
-        demo_actions=[], demo_actions_repeat=0, demos=[]):
+        logger_kwargs=dict(), save_freq=1):
     """
-    Soft Actor-Critic (SAC) with Hindsight Experience Repley (HER)
+    Soft Actor-Critic (SAC)
 
 
     Args:
@@ -174,11 +142,6 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
         save_freq (int): How often (in terms of gap between epochs) to save
             the current policy and value function.
 
-        num_additional_goals (int): Number of additional HER goals for replay.
-
-        goal_selection_strategy (final, future, episode, random): Goal selection
-            method for HER goal generation.
-
     """
 
     logger = EpochLogger(**logger_kwargs)
@@ -188,24 +151,14 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
     np.random.seed(seed)
 
     env, test_env = env_fn(), env_fn()
-    
-    obs_dim = env.observation_space.spaces["observation"].shape
+    obs_dim = env.observation_space.shape
     act_dim = env.action_space.shape[0]
-    goal_dim = env.observation_space.spaces["desired_goal"].shape
-    # The space of an observation concatenated with a goal
-    low_val = np.concatenate([
-        env.observation_space.spaces["observation"].low,
-        env.observation_space.spaces["desired_goal"].low])
-    high_val = np.concatenate([
-        env.observation_space.spaces["observation"].high,
-        env.observation_space.spaces["desired_goal"].high])
-    og_space = gym.spaces.Box(low_val, high_val, dtype=np.float32)
 
     # Action limit for clamping: critically, assumes all dimensions share the same bound!
     act_limit = env.action_space.high[0]
 
     # Create actor-critic module and target networks
-    ac = actor_critic(og_space, env.action_space, **ac_kwargs)
+    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
     ac_targ = deepcopy(ac)
 
     # Freeze target networks with respect to optimizers (only update via polyak averaging)
@@ -216,8 +169,7 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
     q_params = itertools.chain(ac.q1.parameters(), ac.q2.parameters())
 
     # Experience buffer
-    replay_buffer = ReplayBuffer(obs_dim=obs_dim, act_dim=act_dim, 
-                                 goal_dim=goal_dim, size=replay_size)
+    replay_buffer = ReplayBuffer(obs_dim=obs_dim, act_dim=act_dim, size=replay_size)
 
     # Count variables (protip: try to get a feel for how different size networks behave!)
     var_counts = tuple(core.count_vars(module) for module in [ac.pi, ac.q1, ac.q2])
@@ -317,143 +269,34 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
 
     def test_agent():
         for j in range(num_test_episodes):
-            o_dict, d, ep_ret, ep_len = test_env.reset(), False, 0, 0
-            o = o_dict["observation"]
-            g = o_dict["desired_goal"]
+            o, d, ep_ret, ep_len = test_env.reset(), False, 0, 0
             while not(d or (ep_len == max_ep_len)):
                 # Take deterministic actions at test time 
-                og = np.concatenate([o, g], axis=-1)
-                o_dict, r, d, _ = test_env.step(get_action(og, True))
-                o = o_dict["observation"]
-                g = o_dict["desired_goal"]
+                o, r, d, _ = test_env.step(get_action(o, True))
                 ep_ret += r
                 ep_len += 1
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
 
-    def synthesize_experience(env, ep_start_ptr, ep_len, replay_buffer, num=1, selection_strategy='final'):
-        ep = replay_buffer.get_episode(ep_start_ptr, ep_len)
-        ep_end = len(ep['obs'])
-
-        for idx in range(ep_end):
-            obs = ep['obs'][idx]
-            act = ep['act'][idx]
-            obs2 = ep['obs2'][idx]
-            agoal = ep['agoal'][idx]
-            info = ep['info'][idx]
-
-            low_agoal = agoal - 1e-4
-            high_agoal = agoal + 1e-4
-
-            for _ in range(num):
-                if selection_strategy == 'final':
-                    sel_idx = -1
-                elif selection_strategy == 'future':
-                    # We cannot sample a goal from the future in the last step of an episode
-                    if idx == ep_end - 1:
-                        break
-
-                    a = ep['agoal'][idx+1:ep_end]
-                    dif_idxs = np.nonzero((a < low_agoal) | (a > high_agoal))[0]
-
-                    if dif_idxs.size == 0:
-                        break
-
-                    sel_idx = np.random.choice(dif_idxs)
-                elif selection_strategy == 'episode':
-                    a = ep['agoal'][:ep_end]
-                    dif_idxs = np.nonzero((a < low_agoal) | (a > high_agoal))[0]
-
-                    if dif_idxs.size == 0:
-                        break
-
-                    sel_idx = np.random.choice(dif_idxs)
-                else:
-                    raise ValueError("Unsupported selection_strategy: {}".format(selection_strategy))
-
-                sel_agoal = ep['agoal'][sel_idx]
-
-                if not np.allclose(sel_agoal, agoal, rtol=0, atol=1e-4):
-                    rew = env.compute_reward(agoal, sel_agoal, info)
-                    replay_buffer.store(obs, act, rew, obs2, False, sel_agoal, agoal, info)
-
-    def load_demo_experience(demos, replay_buffer, num_additional_goals, goal_selection_strategy='final'):
-        for df in demos:
-            with h5py.File(df, "r") as f:
-                obs = f['obs']
-                obs2 = f['obs2']
-                act = f['act']
-                rew = f['rew']
-                done = f['done']
-                dgoal = f['dgoal']
-                agoal = f['agoal']
-                ep_len = len(obs)
-
-                ep_start_ptr = replay_buffer.ptr
-
-                for i in range(ep_len):
-                    replay_buffer.store(
-                        obs[i], act[i], rew[i], obs2[i], done[i], dgoal[i], agoal[i], {})
-
-                synthesize_experience(env, ep_start_ptr=ep_start_ptr, ep_len=ep_len,
-                                               replay_buffer=replay_buffer, num=num_additional_goals,
-                                               selection_strategy=goal_selection_strategy)
-
-    # Preload experience from demos
-    load_demo_experience(
-        demos, replay_buffer, num_additional_goals=num_additional_goals, goal_selection_strategy=goal_selection_strategy)
-
-
-    if demos:
-        # update a bunch of times from demos
-        for _ in range(len(demos) * 100):
-            batch = replay_buffer.sample_batch(batch_size)
-            og_batch = dict(
-                obs=torch.as_tensor(
-                    np.concatenate(
-                        [batch['obs'], batch['dgoal']], axis=-1),
-                    dtype=torch.float32),
-                obs2=torch.as_tensor(
-                    np.concatenate(
-                        [batch['obs2'], batch['dgoal']], axis=-1),
-                    dtype=torch.float32),
-                act=torch.as_tensor(batch['act'], dtype=torch.float32),
-                rew=torch.as_tensor(batch['rew'], dtype=torch.float32),
-                done=torch.as_tensor(batch['done'], dtype=torch.float32)
-            )
-            update(data=og_batch)
-
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs
     start_time = time.time()
-    o_dict, ep_ret, ep_len = env.reset(), 0, 0
-    ep_start_ptr = replay_buffer.ptr
-    dd = False
-    
-    o = o_dict["observation"]
-    dg = o_dict["desired_goal"]
+    o, ep_ret, ep_len = env.reset(), 0, 0
 
     # Main loop: collect experience in env and update/log each epoch
     for t in range(total_steps):
-        # First, use given demo actions
-        if t < len(demo_actions * demo_actions_repeat):
-            a = demo_actions[t % len(demo_actions)]
-            dd = t % len(demo_actions) == 0 if t > 0 else False
-        elif t > start_steps:
-            # Until start_steps have elapsed, randomly sample actions
-            # from a uniform distribution for better exploration. Afterwards, 
-            # use the learned policy. 
-            odg = np.concatenate([o, dg], axis=-1)
-            a = get_action(odg)
+        
+        # Until start_steps have elapsed, randomly sample actions
+        # from a uniform distribution for better exploration. Afterwards, 
+        # use the learned policy. 
+        if t > start_steps:
+            a = get_action(o)
         else:
             a = env.action_space.sample()
 
         # Step the env
-        o2_dict, r, d, i = env.step(a)
+        o2, r, d, _ = env.step(a)
         ep_ret += r
         ep_len += 1
-        o2 = o2_dict["observation"]
-        dg2 = o2_dict["desired_goal"]
-        ag2 = o2_dict["achieved_goal"]
 
         # Ignore the "done" signal if it comes from hitting the time
         # horizon (that is, when it's an artificial terminal signal
@@ -461,41 +304,22 @@ def sac_her_s(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0
         d = False if ep_len==max_ep_len else d
 
         # Store experience to replay buffer
-        replay_buffer.store(o, a, r, o2, d, dg, ag2, i)
+        replay_buffer.store(o, a, r, o2, d)
 
         # Super critical, easy to overlook step: make sure to update 
         # most recent observation!
         o = o2
-        dg = dg2
 
         # End of trajectory handling
-        if d or (ep_len == max_ep_len) or dd:
+        if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
-            synthesize_experience(env, ep_start_ptr=ep_start_ptr, ep_len=ep_len,
-                                    replay_buffer=replay_buffer, num=num_additional_goals,
-                                    selection_strategy=goal_selection_strategy)
-            ep_start_ptr = replay_buffer.ptr
-            o_dict, ep_ret, ep_len = env.reset(), 0, 0
-            o = o_dict["observation"]
-            dg = o_dict["desired_goal"]
-            dd = False
+            o, ep_ret, ep_len = env.reset(), 0, 0
 
         # Update handling
         if t >= update_after and t % update_every == 0:
             for j in range(update_every):
                 batch = replay_buffer.sample_batch(batch_size)
-                og_batch = dict(
-                    obs=torch.as_tensor(
-                        np.concatenate([batch['obs'], batch['dgoal']], axis=-1), 
-                        dtype=torch.float32),
-                    obs2=torch.as_tensor(
-                        np.concatenate([batch['obs2'], batch['dgoal']], axis=-1),
-                        dtype=torch.float32),
-                    act=torch.as_tensor(batch['act'], dtype=torch.float32),
-                    rew=torch.as_tensor(batch['rew'], dtype=torch.float32),
-                    done=torch.as_tensor(batch['done'], dtype=torch.float32)
-                )
-                update(data=og_batch)
+                update(data=batch)
 
         # End of epoch handling
         if (t+1) % steps_per_epoch == 0:
@@ -540,7 +364,7 @@ if __name__ == '__main__':
 
     torch.set_num_threads(torch.get_num_threads())
 
-    sac_her_s(lambda : gym.make(args.env), actor_critic=core.MLPActorCritic,
+    sac(lambda : gym.make(args.env), actor_critic=core.MLPActorCritic,
         ac_kwargs=dict(hidden_sizes=[args.hid]*args.l), 
         gamma=args.gamma, seed=args.seed, epochs=args.epochs,
         logger_kwargs=logger_kwargs)
