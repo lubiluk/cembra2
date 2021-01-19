@@ -38,6 +38,7 @@ class SquashedGaussianMLPActor(nn.Module):
             self.ext = extractor(obs_space, **e_kwargs)
             self.net = mlp([self.ext.feature_space.shape[0]] + list(hidden_sizes), activation, activation)
         else:
+            self.ext = None
             self.net = mlp([obs_space.shape[0]] + list(hidden_sizes), activation, activation)
         
         self.mu_layer = nn.Linear(hidden_sizes[-1], act_dim)
@@ -90,6 +91,7 @@ class MLPQFunction(nn.Module):
             self.q = mlp([self.ext.feature_space.shape[0] + act_dim] + list(hidden_sizes) + [1],
                         activation)
         else:
+            self.ext = None
             self.q = mlp([obs_space.shape[0] + act_dim] + list(hidden_sizes) + [1], activation)
             
     def forward(self, obs, act):
@@ -122,8 +124,8 @@ class MLPActorCritic(nn.Module):
 
     def act(self, obs, deterministic=False):
         with torch.no_grad():
-            a, _ = self.pi(obs, deterministic, False)
-            return a.numpy()
+            a, _ = self.pi(obs.unsqueeze(dim=0), deterministic, False)
+            return a.squeeze(dim=0).numpy()
 
 
 def cnn(sizes, activation):
