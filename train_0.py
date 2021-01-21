@@ -20,12 +20,11 @@ model = HER('MlpPolicy',
             gamma=0.95,
             goal_selection_strategy='future',
             ent_coef='auto',
-            policy_kwargs = dict(activation_fn=th.nn.ReLU, net_arch=[256, 256, 256]),
+            policy_kwargs=dict(activation_fn=th.nn.ReLU,
+                               net_arch=[256, 256, 256]),
             train_freq=1,
-            tensorboard_log="./data/0_tensorboard/"
-            )
+            tensorboard_log="./data/0_tensorboard/")
 # Train the model
 model.learn(1000000)
 
 model.save("./data/0")
-
