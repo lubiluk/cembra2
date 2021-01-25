@@ -31,12 +31,23 @@ LOG_STD_MIN = -20
 
 
 class SquashedGaussianMLPActor(nn.Module):
-    def __init__(self, obs_dim, act_dim, hidden_sizes, activation, act_limit):
+    def __init__(self,
+                 obs_dim,
+                 act_dim,
+                 hidden_sizes,
+                 activation,
+                 act_limit,
+                 device=None):
         super(SquashedGaussianMLPActor, self).__init__()
         self.net = mlp([obs_dim] + list(hidden_sizes), activation, activation)
         self.mu_layer = nn.Linear(hidden_sizes[-1], act_dim)
         self.log_std_layer = nn.Linear(hidden_sizes[-1], act_dim)
         self.act_limit = act_limit
+
+        if device:
+            self.net.to(device)
+            self.mu_layer.to(device)
+            self.log_std_layer.to(device)
 
     def forward(self, obs, deterministic=False, with_logprob=True):
         net_out = self.net(obs)
@@ -73,10 +84,18 @@ class SquashedGaussianMLPActor(nn.Module):
 
 
 class MLPQFunction(nn.Module):
-    def __init__(self, obs_dim, act_dim, hidden_sizes, activation):
+    def __init__(self,
+                 obs_dim,
+                 act_dim,
+                 hidden_sizes,
+                 activation,
+                 device=None):
         super(MLPQFunction, self).__init__()
         self.q = mlp([obs_dim + act_dim] + list(hidden_sizes) + [1],
                      activation)
+
+        if device:
+            self.q.to(device)
 
     def forward(self, obs, act):
         q = self.q(torch.cat([obs, act], dim=-1))
@@ -88,7 +107,8 @@ class MLPActorCritic(nn.Module):
                  observation_space,
                  action_space,
                  hidden_sizes=(256, 256),
-                 activation=nn.ReLU):
+                 activation=nn.ReLU,
+                 device=None):
         super(MLPActorCritic, self).__init__()
 
         obs_dim = observation_space.shape[0]
@@ -97,9 +117,11 @@ class MLPActorCritic(nn.Module):
 
         # build policy and value functions
         self.pi = SquashedGaussianMLPActor(obs_dim, act_dim, hidden_sizes,
-                                           activation, act_limit)
-        self.q1 = MLPQFunction(obs_dim, act_dim, hidden_sizes, activation)
-        self.q2 = MLPQFunction(obs_dim, act_dim, hidden_sizes, activation)
+                                           activation, act_limit, device)
+        self.q1 = MLPQFunction(obs_dim, act_dim, hidden_sizes, activation,
+                               device)
+        self.q2 = MLPQFunction(obs_dim, act_dim, hidden_sizes, activation,
+                               device)
 
     def act(self, obs, deterministic=False):
         with torch.no_grad():

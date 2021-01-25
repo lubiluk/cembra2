@@ -34,5 +34,5 @@ sac(env_fn=env_fn,
     gamma=0.95,
     lr=0.001,
     update_after=100,
-    update_every=1,
+    update_every=64,
     logger_kwargs=logger_kwargs)

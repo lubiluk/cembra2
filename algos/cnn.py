@@ -31,26 +31,41 @@ LOG_STD_MIN = -20
 
 
 class SquashedGaussianMLPActor(nn.Module):
-    def __init__(self, obs_space, act_dim, hidden_sizes, activation, act_limit, extractor, e_kwargs):
+    def __init__(self,
+                 obs_space,
+                 act_dim,
+                 hidden_sizes,
+                 activation,
+                 act_limit,
+                 extractor,
+                 e_kwargs,
+                 device=None):
         super(SquashedGaussianMLPActor, self).__init__()
 
         if extractor:
-            self.ext = extractor(obs_space, **e_kwargs)
-            self.net = mlp([self.ext.feature_space.shape[0]] + list(hidden_sizes), activation, activation)
+            self.ext = extractor(obs_space, device=device, **e_kwargs)
+            self.net = mlp([self.ext.feature_space.shape[0]] +
+                           list(hidden_sizes), activation, activation)
         else:
             self.ext = None
-            self.net = mlp([obs_space.shape[0]] + list(hidden_sizes), activation, activation)
-        
+            self.net = mlp([obs_space.shape[0]] + list(hidden_sizes),
+                           activation, activation)
+
         self.mu_layer = nn.Linear(hidden_sizes[-1], act_dim)
         self.log_std_layer = nn.Linear(hidden_sizes[-1], act_dim)
         self.act_limit = act_limit
+
+        if device:
+            self.net.to(device)
+            self.mu_layer.to(device)
+            self.log_std_layer.to(device)
 
     def forward(self, obs, deterministic=False, with_logprob=True):
         if self.ext:
             net_out = self.net(self.ext(obs))
         else:
             net_out = self.net(obs)
-        
+
         mu = self.mu_layer(net_out)
         log_std = self.log_std_layer(net_out)
         log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
@@ -84,16 +99,28 @@ class SquashedGaussianMLPActor(nn.Module):
 
 
 class MLPQFunction(nn.Module):
-    def __init__(self, obs_space, act_dim, hidden_sizes, activation, extractor, e_kwargs):
+    def __init__(self,
+                 obs_space,
+                 act_dim,
+                 hidden_sizes,
+                 activation,
+                 extractor,
+                 e_kwargs,
+                 device=None):
         super(MLPQFunction, self).__init__()
+
         if extractor:
-            self.ext = extractor(obs_space, **e_kwargs)
-            self.q = mlp([self.ext.feature_space.shape[0] + act_dim] + list(hidden_sizes) + [1],
-                        activation)
+            self.ext = extractor(obs_space, device=device, **e_kwargs)
+            self.q = mlp([self.ext.feature_space.shape[0] + act_dim] +
+                         list(hidden_sizes) + [1], activation)
         else:
             self.ext = None
-            self.q = mlp([obs_space.shape[0] + act_dim] + list(hidden_sizes) + [1], activation)
-            
+            self.q = mlp([obs_space.shape[0] + act_dim] + list(hidden_sizes) +
+                         [1], activation)
+
+        if device:
+            self.q.to(device)
+
     def forward(self, obs, act):
         if self.ext:
             q = self.q(torch.cat([self.ext(obs), act], dim=-1))
@@ -110,17 +137,36 @@ class MLPActorCritic(nn.Module):
                  hidden_sizes=(256, 256),
                  activation=nn.ReLU,
                  extractor=None,
-                 e_kwargs=dict()):
+                 e_kwargs=dict(),
+                 device=None):
         super(MLPActorCritic, self).__init__()
 
         act_dim = action_space.shape[0]
         act_limit = action_space.high[0]
 
         # build policy and value functions
-        self.pi = SquashedGaussianMLPActor(observation_space, act_dim, hidden_sizes,
-                                           activation, act_limit, extractor=extractor, e_kwargs=e_kwargs)
-        self.q1 = MLPQFunction(observation_space, act_dim, hidden_sizes, activation, extractor=extractor, e_kwargs=e_kwargs)
-        self.q2 = MLPQFunction(observation_space, act_dim, hidden_sizes, activation, extractor=extractor, e_kwargs=e_kwargs)
+        self.pi = SquashedGaussianMLPActor(observation_space,
+                                           act_dim,
+                                           hidden_sizes,
+                                           activation,
+                                           act_limit,
+                                           extractor=extractor,
+                                           e_kwargs=e_kwargs,
+                                           device=device)
+        self.q1 = MLPQFunction(observation_space,
+                               act_dim,
+                               hidden_sizes,
+                               activation,
+                               extractor=extractor,
+                               e_kwargs=e_kwargs,
+                               device=device)
+        self.q2 = MLPQFunction(observation_space,
+                               act_dim,
+                               hidden_sizes,
+                               activation,
+                               extractor=extractor,
+                               e_kwargs=e_kwargs,
+                               device=device)
 
     def act(self, obs, deterministic=False):
         with torch.no_grad():
@@ -129,20 +175,24 @@ class MLPActorCritic(nn.Module):
 
 
 def cnn(sizes, activation):
-    return nn.Sequential(nn.Linear(nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=8, stride=4, padding=0),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
-            nn.ReLU(),
-            nn.Flatten(),
-        ), features_dim), nn.ReLU())
+    return nn.Sequential(
+        nn.Linear(
+            nn.Sequential(
+                nn.Conv2d(3, 32, kernel_size=8, stride=4, padding=0),
+                nn.ReLU(),
+                nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+                nn.ReLU(),
+                nn.Flatten(),
+            ), features_dim), nn.ReLU())
+
 
 class FeatureExtractor(nn.Module):
     def __init__(self,
                  observation_space,
                  cnn_sizes=(256, 256),
                  activation=nn.ReLU,
-                 features_dim=256):
+                 features_dim=256,
+                 device=None):
         super(FeatureExtractor, self).__init__()
 
         # We assume CxHxW images (channels first)
@@ -165,15 +215,16 @@ class FeatureExtractor(nn.Module):
         self.bottom_linear = nn.Sequential(
             nn.Linear(bottom_n_flatten, features_dim), nn.ReLU())
 
+        if device:
+            self.bottom_cnn.to(device)
+            self.bottom_linear.to(device)
+
         self.feature_space = spaces.Box(-np.inf, np.inf, (features_dim + 18, ),
-                               np.float32)
+                                        np.float32)
 
     def forward(self, observations):
         bottom = self.bottom_linear(
-            self.bottom_cnn(
-                self._get_bottom_camera_obs(observations)
-            )
-        )
+            self.bottom_cnn(self._get_bottom_camera_obs(observations)))
         joints = self._get_joints_state_obs(observations)
 
         cat = torch.cat((bottom, joints), dim=1)
@@ -181,8 +232,7 @@ class FeatureExtractor(nn.Module):
         return cat
 
     def _get_bottom_camera_obs(self, obs):
-        return obs[:,:3,:,:]
+        return obs[:, :3, :, :]
 
     def _get_joints_state_obs(self, obs):
-        return obs[:,3,:18,0]
-
+        return obs[:, 3, :18, 0]
