@@ -169,9 +169,9 @@ def sac(env_fn,
 
     if torch.cuda.is_available():
         device = torch.device("cuda")
-        print("Using CUDA device")
+        logger.log('\nUsing CUDA device\n')
     else:
-        print("Using CPU device")
+        logger.log('\nUsing CPU device\n')
 
     torch.manual_seed(seed)
     np.random.seed(seed)
