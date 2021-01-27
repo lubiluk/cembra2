@@ -74,7 +74,7 @@ class ReplayBuffer:
                     info=self.info_buf[idxs])
 
 
-def sac_her(env_fn,
+def sac_her_cnn(env_fn,
             actor_critic=core.MLPActorCritic,
             ac_kwargs=dict(),
             seed=0,
