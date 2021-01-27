@@ -171,7 +171,7 @@ class MLPActorCritic(nn.Module):
     def act(self, obs, deterministic=False):
         with torch.no_grad():
             a, _ = self.pi(obs.unsqueeze(dim=0), deterministic, False)
-            return a.squeeze(dim=0).numpy()
+            return a.squeeze(dim=0).cpu().numpy()
 
 
 def cnn(sizes, activation):
