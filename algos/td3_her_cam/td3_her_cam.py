@@ -129,7 +129,7 @@ class ReplayBuffer:
                     info=self.info_buf[idxs])
 
 
-def td3_her_cam(env_fn,
+def td3_her_cam(env,
                 actor_critic=core.MLPActorCritic,
                 ac_kwargs=dict(),
                 seed=0,
@@ -283,7 +283,6 @@ def td3_her_cam(env_fn,
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    env = env_fn()
     test_env = env
 
     act_dim = env.action_space.shape[0]
