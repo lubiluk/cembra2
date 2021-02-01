@@ -2,29 +2,27 @@ import gym
 import gym_pepper
 import torch
 import torch.nn as nn
-from algos import sac_her_cnn
-from utils import wrappers
-from utils.pepper_preprocessing import PepperPreprocessingGoal
-import algos.cnn as cnn
+from algos import td3_her_cam
+from algos.td3_her_cam import core
 from gym.wrappers.time_limit import TimeLimit
 
 
 def env_fn():
-    return PepperPreprocessingGoal(
-        TimeLimit(gym.make("PepperPushCam-v0", gui=False),
-                  max_episode_steps=100))
+    return TimeLimit(gym.make("PepperPushCam-v0", gui=False),
+                  max_episode_steps=100)
 
 
-e_kwargs = dict(cnn_sizes=[], activation=nn.ReLU)
 ac_kwargs = dict(hidden_sizes=[128, 128],
                  activation=nn.ReLU,
-                 extractor=cnn.FeatureExtractor,
-                 e_kwargs=e_kwargs)
+                 conv_sizes=[
+                     [3, 32, 8, 4, 0],
+                     [32, 64, 4, 2, 0]
+                 ])
 
 logger_kwargs = dict(output_dir='data/3', exp_name='2')
 
-sac_her_cnn(env_fn=env_fn,
-        actor_critic=cnn.MLPActorCritic,
+td3_her_cam(env_fn=env_fn,
+        actor_critic=core.MLPActorCritic,
         ac_kwargs=ac_kwargs,
         steps_per_epoch=10000,
         max_ep_len=100,
@@ -32,7 +30,8 @@ sac_her_cnn(env_fn=env_fn,
         batch_size=64,
         replay_size=3000,
         gamma=0.95,
-        lr=0.001,
+        pi_lr=1e-3,
+        q_lr=1e-3,
         update_after=1000,
         update_every=64,
         num_additional_goals=1,

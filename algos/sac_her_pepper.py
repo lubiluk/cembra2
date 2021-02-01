@@ -94,9 +94,7 @@ def sac_her_cnn(env_fn,
             logger_kwargs=dict(),
             save_freq=1,
             num_additional_goals=1,
-            goal_selection_strategy='final',
-            demo_actions=[],
-            demo_actions_repeat=0):
+            goal_selection_strategy='final'):
     """
     Soft Actor-Critic (SAC) with Hindsight Experience Repley (HER)
 
@@ -218,22 +216,12 @@ def sac_her_cnn(env_fn,
     obs_dim = env.observation_space.spaces["observation"].shape
     act_dim = env.action_space.shape[0]
     goal_dim = env.observation_space.spaces["desired_goal"].shape
-    # The space of an observation concatenated with a goal
-    low_val = np.concatenate([
-        env.observation_space.spaces["observation"].low,
-        env.observation_space.spaces["desired_goal"].low
-    ])
-    high_val = np.concatenate([
-        env.observation_space.spaces["observation"].high,
-        env.observation_space.spaces["desired_goal"].high
-    ])
-    og_space = gym.spaces.Box(low_val, high_val, dtype=np.float32)
 
     # Action limit for clamping: critically, assumes all dimensions share the same bound!
     act_limit = env.action_space.high[0]
 
     # Create actor-critic module and target networks
-    ac = actor_critic(og_space, env.action_space, device=device, **ac_kwargs)
+    ac = actor_critic(goal_dim, env.action_space, device=device, **ac_kwargs)
     ac_targ = deepcopy(ac)
 
     # Freeze target networks with respect to optimizers (only update via polyak averaging)
