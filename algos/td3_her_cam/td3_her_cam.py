@@ -7,6 +7,8 @@ import gym
 import time
 from . import core
 from ..logx import EpochLogger
+from signal import *
+import sys
 
 
 class ReplayBuffer:
@@ -129,7 +131,7 @@ class ReplayBuffer:
                     info=self.info_buf[idxs])
 
 
-def td3_her_cam(env,
+def td3_her_cam(env_fn,
                 actor_critic=core.MLPActorCritic,
                 ac_kwargs=dict(),
                 seed=0,
@@ -283,7 +285,15 @@ def td3_her_cam(env,
     torch.manual_seed(seed)
     np.random.seed(seed)
 
+    env = env_fn()
     test_env = env
+
+    def clean(*args):
+        env.close()
+        sys.exit(0)
+
+    for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
+        signal(sig, clean)
 
     act_dim = env.action_space.shape[0]
 
