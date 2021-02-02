@@ -64,20 +64,25 @@ class MLPActor(nn.Module):
 
         self.cnn, self.feat = cnn(conv_sizes, activation, feature_dim,
                                   cam_space)
-        pi_sizes = [feature_dim + joints_dim + dgoal_dim] + list(hidden_sizes) + [act_dim]
+        pi_sizes = [feature_dim + joints_dim + dgoal_dim
+                    ] + list(hidden_sizes) + [act_dim]
         self.pi = mlp(pi_sizes, activation, nn.Tanh)
         self.act_limit = act_limit
 
+        if device:
+            self.pi.to(device)
+
     def forward(self, obs):
         obs_img = torch.stack([o["observation"]["camera_bottom"] for o in obs])
-        obs_img_nom = obs_img / 255 - 0.5 # normalize
+        obs_img_nom = obs_img / 255 - 0.5  # normalize
         obs_lin = torch.stack([o["observation"]["joints_state"] for o in obs])
         dgoal = torch.stack([o["desired_goal"] for o in obs])
 
         feat = self.feat(self.cnn(obs_img_nom))
 
         # Return output from network scaled to action space limits.
-        return self.act_limit * self.pi(torch.cat((feat, obs_lin, dgoal), dim=-1))
+        return self.act_limit * self.pi(
+            torch.cat((feat, obs_lin, dgoal), dim=-1))
 
 
 class MLPQFunction(nn.Module):
@@ -90,7 +95,7 @@ class MLPQFunction(nn.Module):
                  activation,
                  device=None):
         super(MLPQFunction, self).__init__()
-        
+
         cam_space = obs_space.spaces["observation"]["camera_bottom"]
         joints_dim = obs_space.spaces["observation"]["joints_state"].shape[0]
         dgoal_dim = obs_space.spaces["desired_goal"].shape[0]
@@ -100,9 +105,13 @@ class MLPQFunction(nn.Module):
         self.q = mlp([feature_dim + joints_dim + dgoal_dim + act_dim] +
                      list(hidden_sizes) + [1], activation)
 
+        if device:
+            self.cnn.to(device)
+            self.q.to(device)
+
     def forward(self, obs, act):
         obs_img = torch.stack([o["observation"]["camera_bottom"] for o in obs])
-        obs_img_nom = obs_img / 255 - 0.5 # normalize
+        obs_img_nom = obs_img / 255 - 0.5  # normalize
         obs_lin = torch.stack([o["observation"]["joints_state"] for o in obs])
         dgoal = torch.stack([o["desired_goal"] for o in obs])
 
@@ -129,12 +138,28 @@ class MLPActorCritic(nn.Module):
         act_limit = action_space.high[0]
 
         # build policy and value functions
-        self.pi = MLPActor(observation_space, act_dim, conv_sizes, feature_dim,
-                           hidden_sizes, activation, act_limit)
-        self.q1 = MLPQFunction(observation_space, act_dim, conv_sizes,
-                               feature_dim, hidden_sizes, activation)
-        self.q2 = MLPQFunction(observation_space, act_dim, conv_sizes,
-                               feature_dim, hidden_sizes, activation)
+        self.pi = MLPActor(observation_space,
+                           act_dim,
+                           conv_sizes,
+                           feature_dim,
+                           hidden_sizes,
+                           activation,
+                           act_limit,
+                           device=device)
+        self.q1 = MLPQFunction(observation_space,
+                               act_dim,
+                               conv_sizes,
+                               feature_dim,
+                               hidden_sizes,
+                               activation,
+                               device=device)
+        self.q2 = MLPQFunction(observation_space,
+                               act_dim,
+                               conv_sizes,
+                               feature_dim,
+                               hidden_sizes,
+                               activation,
+                               device=device)
 
     def act(self, obs):
         obs = torch.as_tensor(obs, dtype=torch.float32, device=self.device)

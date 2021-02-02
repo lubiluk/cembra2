@@ -13,155 +13,71 @@ import sys
 
 class ReplayBuffer:
     """
-    A simple FIFO experience replay buffer for TD3 HER agents.
+    A simple FIFO experience replay buffer for TD3 agents.
     """
-    def __init__(self, obs_space, act_dim, size, device=None):
+    def __init__(self, obs_dim, act_dim, size, device=None):
         self.device = device
 
-        img_dim = obs_space.spaces["observation"]["camera_bottom"].shape
-        lin_dim = obs_space.spaces["observation"]["joints_state"].shape
-        goal_dim = obs_space.spaces["desired_goal"].shape[0]
-
-        self.obs_img_buf = torch.zeros(core.combined_shape(size, img_dim),
-                                       dtype=torch.float32,
-                                       device=device)
-        self.obs_lin_buf = torch.zeros(core.combined_shape(size, lin_dim),
-                                       dtype=torch.float32,
-                                       device=device)
-        self.obs_dgoal_buf = torch.zeros(core.combined_shape(size, goal_dim),
-                                         dtype=torch.float32,
-                                         device=device)
-        self.obs_agoal_buf = torch.zeros(core.combined_shape(size, goal_dim),
-                                         dtype=torch.float32,
-                                         device=device)
-
+        self.obs_buf = torch.zeros(core.combined_shape(size, obs_dim),
+                                   dtype=torch.float32,
+                                   device=device)
+        self.obs2_buf = torch.zeros(core.combined_shape(size, obs_dim),
+                                    dtype=torch.float32,
+                                    device=device)
         self.act_buf = torch.zeros(core.combined_shape(size, act_dim),
                                    dtype=torch.float32,
                                    device=device)
-
-        self.obs2_img_buf = torch.zeros(core.combined_shape(size, img_dim),
-                                        dtype=torch.float32,
-                                        device=device)
-        self.obs2_lin_buf = torch.zeros(core.combined_shape(size, lin_dim),
-                                        dtype=torch.float32,
-                                        device=device)
-        self.obs2_dgoal_buf = torch.zeros(core.combined_shape(size, goal_dim),
-                                          dtype=torch.float32,
-                                          device=device)
-        self.obs2_agoal_buf = torch.zeros(core.combined_shape(size, goal_dim),
-                                          dtype=torch.float32,
-                                          device=device)
-
         self.rew_buf = torch.zeros(size, dtype=torch.float32, device=device)
         self.done_buf = torch.zeros(size, dtype=torch.bool, device=device)
-        self.info_buf = np.empty((size, 1), dtype=object)
         self.ptr, self.size, self.max_size = 0, 0, size
 
-    def store(self, obs, act, rew, next_obs, done, info):
-        obs_img = obs["observation"]["camera_bottom"]
-        obs_lin = obs["observation"]["joints_state"]
-        obs_dgoal = obs["desired_goal"]
-        obs_agoal = obs["achieved_goal"]
-
-        next_obs_img = next_obs["observation"]["camera_bottom"]
-        next_obs_lin = next_obs["observation"]["joints_state"]
-        next_obs_dgoal = next_obs["desired_goal"]
-        next_obs_agoal = next_obs["achieved_goal"]
-
-        self.obs_img_buf[self.ptr] = torch.as_tensor(obs_img, dtype=torch.float32)
-        self.obs_lin_buf[self.ptr] = torch.as_tensor(obs_lin, dtype=torch.float32)
-        self.obs_dgoal_buf[self.ptr] = torch.as_tensor(obs_dgoal, dtype=torch.float32)
-        self.obs_agoal_buf[self.ptr] = torch.as_tensor(obs_agoal, dtype=torch.float32)
-
-        self.obs2_img_buf[self.ptr] = torch.as_tensor(next_obs_img, dtype=torch.float32)
-        self.obs2_lin_buf[self.ptr] = torch.as_tensor(next_obs_lin, dtype=torch.float32)
-        self.obs2_dgoal_buf[self.ptr] = torch.as_tensor(next_obs_dgoal, dtype=torch.float32)
-        self.obs2_agoal_buf[self.ptr] = torch.as_tensor(next_obs_agoal, dtype=torch.float32)
-
+    def store(self, obs, act, rew, next_obs, done):
+        self.obs_buf[self.ptr] = torch.as_tensor(obs, dtype=torch.float32)
+        self.obs2_buf[self.ptr] = torch.as_tensor(next_obs,
+                                                  dtype=torch.float32)
         self.act_buf[self.ptr] = torch.as_tensor(act, dtype=torch.float32)
-
         self.rew_buf[self.ptr] = torch.as_tensor(rew, dtype=torch.float32)
         self.done_buf[self.ptr] = torch.as_tensor(done, dtype=torch.bool)
-        self.info_buf[self.ptr] = info
-
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
     def sample_batch(self, batch_size=32):
         idxs = np.random.randint(0, self.size, size=batch_size)
-
-        return self._get_batch(idxs)
-
-    def get_episode(self, ep_start_ptr, ep_len):
-        idxs = np.arange(ep_start_ptr, min(ep_start_ptr + ep_len, self.size))
-
-        if len(idxs) < ep_len:
-            idxs = np.concatenate(
-                [idxs, np.arange((ep_start_ptr + ep_len) % self.size)])
-
-        return self._get_batch(idxs)
-
-    def _get_batch(self, idxs):
-        obs = [{
-            "observation": {
-                "camera_bottom": c,
-                "joints_state": j
-            },
-            "desired_goal": dg,
-            "achieved_goal": ag
-        } for c, j, dg, ag in
-               zip(self.obs_img_buf[idxs], self.obs_lin_buf[idxs],
-                   self.obs_dgoal_buf[idxs], self.obs_agoal_buf[idxs])]
-        obs2 = [{
-            "observation": {
-                "camera_bottom": c,
-                "joints_state": j
-            },
-            "desired_goal": dg,
-            "achieved_goal": ag
-        } for c, j, dg, ag in
-                zip(self.obs2_img_buf[idxs], self.obs2_lin_buf[idxs],
-                    self.obs2_dgoal_buf[idxs], self.obs2_agoal_buf[idxs])]
-
-        return dict(obs=obs,
-                    obs2=obs2,
+        return dict(obs=self.obs_buf[idxs],
+                    obs2=self.obs2_buf[idxs],
                     act=self.act_buf[idxs],
                     rew=self.rew_buf[idxs],
-                    done=self.done_buf[idxs],
-                    info=self.info_buf[idxs])
+                    done=self.done_buf[idxs])
 
 
-def td3_her_cam(env_fn,
-                actor_critic=core.MLPActorCritic,
-                ac_kwargs=dict(),
-                seed=0,
-                steps_per_epoch=4000,
-                epochs=100,
-                replay_size=int(1e6),
-                gamma=0.99,
-                polyak=0.995,
-                pi_lr=1e-3,
-                q_lr=1e-3,
-                batch_size=100,
-                start_steps=10000,
-                update_after=1000,
-                update_every=50,
-                act_noise=0.1,
-                target_noise=0.2,
-                noise_clip=0.5,
-                policy_delay=2,
-                num_test_episodes=10,
-                max_ep_len=1000,
-                logger_kwargs=dict(),
-                save_freq=1,
-                num_additional_goals=1,
-                goal_selection_strategy='final',
-                num_updates=None,
-                use_gpu_buffer=True,
-                use_gpu_computation=True):
+def td3(env_fn,
+        actor_critic=core.MLPActorCritic,
+        ac_kwargs=dict(),
+        seed=0,
+        steps_per_epoch=4000,
+        epochs=100,
+        replay_size=int(1e6),
+        gamma=0.99,
+        polyak=0.995,
+        pi_lr=1e-3,
+        q_lr=1e-3,
+        batch_size=100,
+        start_steps=10000,
+        update_after=1000,
+        update_every=50,
+        act_noise=0.1,
+        target_noise=0.2,
+        noise_clip=0.5,
+        policy_delay=2,
+        num_test_episodes=10,
+        max_ep_len=1000,
+        logger_kwargs=dict(),
+        save_freq=1,
+        num_updates=None,
+        use_gpu_buffer=True,
+        use_gpu_computation=True):
     """
-    Twin Delayed Deep Deterministic Policy Gradient (TD3) 
-        with Hindsight Experience Repley (HER)
+    Twin Delayed Deep Deterministic Policy Gradient (TD3)
 
 
     Args:
@@ -256,11 +172,6 @@ def td3_her_cam(env_fn,
         save_freq (int): How often (in terms of gap between epochs) to save
             the current policy and value function.
 
-        num_additional_goals (int): Number of additional HER goals for replay.
-
-        goal_selection_strategy (final, future, episode, random): Goal selection
-            method for HER goal generation.
-
         num_updates (int): The number of updates per `update_every`, 
             by default it is the same as save_freq
 
@@ -300,6 +211,7 @@ def td3_her_cam(env_fn,
     for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
         signal(sig, clean)
 
+    obs_dim = env.observation_space.shape
     act_dim = env.action_space.shape[0]
 
     # Action limit for clamping: critically, assumes all dimensions share the same bound!
@@ -320,7 +232,7 @@ def td3_her_cam(env_fn,
     q_params = itertools.chain(ac.q1.parameters(), ac.q2.parameters())
 
     # Experience buffer
-    replay_buffer = ReplayBuffer(obs_space=env.observation_space,
+    replay_buffer = ReplayBuffer(obs_dim=obs_dim,
                                  act_dim=act_dim,
                                  size=replay_size,
                                  device=buff_device)
@@ -436,50 +348,10 @@ def td3_her_cam(env_fn,
                 ep_len += 1
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
 
-    def synthesize_experience(env,
-                              ep_start_ptr,
-                              ep_len,
-                              replay_buffer,
-                              num=1,
-                              selection_strategy='final'):
-        ep = replay_buffer.get_episode(ep_start_ptr, ep_len)
-        ep_end = len(ep['obs'])
-
-        for idx in range(ep_end):
-            obs = ep['obs'][idx]
-            act = ep['act'][idx]
-            obs2 = ep['obs2'][idx]
-            info = ep['info'][idx]
-
-            for _ in range(num):
-                if selection_strategy == 'final':
-                    sel_idx = -1
-                elif selection_strategy == 'future':
-                    # We cannot sample a goal from the future in the last step of an episode
-                    if idx == ep_end - 1:
-                        break
-                    sel_idx = np.random.choice(np.arange(idx + 1, ep_end))
-                elif selection_strategy == 'episode':
-                    sel_idx = np.random.choice(np.arange(ep_end))
-                else:
-                    raise ValueError(
-                        "Unsupported selection_strategy: {}".format(
-                            selection_strategy))
-
-                sel_obs2 = ep['obs2'][sel_idx]
-
-                rew = env.compute_reward(obs2["achieved_goal"],
-                                         sel_obs2["achieved_goal"], info)
-
-                obs["desired_goal"] = sel_obs2["achieved_goal"]
-
-                replay_buffer.store(obs, act, rew, obs2, False, info)
-
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
-    ep_start_ptr = replay_buffer.ptr
 
     # Main loop: collect experience in env and update/log each epoch
     for t in range(total_steps):
@@ -493,7 +365,7 @@ def td3_her_cam(env_fn,
             a = env.action_space.sample()
 
         # Step the env
-        o2, r, d, i = env.step(a)
+        o2, r, d, _ = env.step(a)
         ep_ret += r
         ep_len += 1
 
@@ -503,7 +375,7 @@ def td3_her_cam(env_fn,
         d = False if ep_len == max_ep_len else d
 
         # Store experience to replay buffer
-        replay_buffer.store(o, a, r, o2, d, i)
+        replay_buffer.store(o, a, r, o2, d)
 
         # Super critical, easy to overlook step: make sure to update
         # most recent observation!
@@ -512,13 +384,6 @@ def td3_her_cam(env_fn,
         # End of trajectory handling
         if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
-            synthesize_experience(env,
-                                  ep_start_ptr=ep_start_ptr,
-                                  ep_len=ep_len,
-                                  replay_buffer=replay_buffer,
-                                  num=num_additional_goals,
-                                  selection_strategy=goal_selection_strategy)
-            ep_start_ptr = replay_buffer.ptr
             o, ep_ret, ep_len = env.reset(), 0, 0
 
         # Update handling
@@ -568,10 +433,10 @@ if __name__ == '__main__':
     from spinup.utils.run_utils import setup_logger_kwargs
     logger_kwargs = setup_logger_kwargs(args.exp_name, args.seed)
 
-    td3_her(lambda: gym.make(args.env),
-            actor_critic=core.MLPActorCritic,
-            ac_kwargs=dict(hidden_sizes=[args.hid] * args.l),
-            gamma=args.gamma,
-            seed=args.seed,
-            epochs=args.epochs,
-            logger_kwargs=logger_kwargs)
+    td3(lambda: gym.make(args.env),
+        actor_critic=core.MLPActorCritic,
+        ac_kwargs=dict(hidden_sizes=[args.hid] * args.l),
+        gamma=args.gamma,
+        seed=args.seed,
+        epochs=args.epochs,
+        logger_kwargs=logger_kwargs)
