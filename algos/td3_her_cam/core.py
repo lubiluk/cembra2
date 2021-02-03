@@ -58,6 +58,8 @@ class MLPActor(nn.Module):
                  device=None):
         super(MLPActor, self).__init__()
 
+        self.device = device
+
         cam_space = obs_space.spaces["observation"]["camera_bottom"]
         joints_dim = obs_space.spaces["observation"]["joints_state"].shape[0]
         dgoal_dim = obs_space.spaces["desired_goal"].shape[0]
@@ -70,6 +72,8 @@ class MLPActor(nn.Module):
         self.act_limit = act_limit
 
         if device:
+            self.cnn.to(device)
+            self.feat.to(device)
             self.pi.to(device)
 
     def forward(self, obs):
@@ -108,6 +112,8 @@ class MLPQFunction(nn.Module):
                  device=None):
         super(MLPQFunction, self).__init__()
 
+        self.device = device
+
         cam_space = obs_space.spaces["observation"]["camera_bottom"]
         joints_dim = obs_space.spaces["observation"]["joints_state"].shape[0]
         dgoal_dim = obs_space.spaces["desired_goal"].shape[0]
@@ -119,6 +125,7 @@ class MLPQFunction(nn.Module):
 
         if device:
             self.cnn.to(device)
+            self.feat.to(device)
             self.q.to(device)
 
     def forward(self, obs, act):

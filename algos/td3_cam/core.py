@@ -70,6 +70,8 @@ class MLPActor(nn.Module):
         self.act_limit = act_limit
 
         if device:
+            self.cnn.to(device)
+            self.feat.to(device)
             self.pi.to(device)
 
     def forward(self, obs):
@@ -114,6 +116,7 @@ class MLPQFunction(nn.Module):
 
         if device:
             self.cnn.to(device)
+            self.feat.to(device)
             self.q.to(device)
 
     def forward(self, obs, act):
