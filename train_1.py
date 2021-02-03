@@ -29,6 +29,6 @@ td3_her(env_fn=env_fn,
         q_lr=1e-3,
         update_after=1000,
         update_every=64,
-        num_additional_goals=1,
+        num_additional_goals=4,
         goal_selection_strategy='future',
         logger_kwargs=logger_kwargs)
