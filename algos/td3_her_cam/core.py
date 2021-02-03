@@ -73,10 +73,22 @@ class MLPActor(nn.Module):
             self.pi.to(device)
 
     def forward(self, obs):
-        obs_img = torch.stack([o["observation"]["camera_bottom"] for o in obs])
+        obs_img = torch.stack([
+            torch.as_tensor(o["observation"]["camera_bottom"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
         obs_img_nom = obs_img / 255 - 0.5  # normalize
-        obs_lin = torch.stack([o["observation"]["joints_state"] for o in obs])
-        dgoal = torch.stack([o["desired_goal"] for o in obs])
+        obs_lin = torch.stack([
+            torch.as_tensor(o["observation"]["joints_state"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
+        dgoal = torch.stack([
+            torch.as_tensor(o["desired_goal"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
 
         feat = self.feat(self.cnn(obs_img_nom))
 
@@ -110,10 +122,22 @@ class MLPQFunction(nn.Module):
             self.q.to(device)
 
     def forward(self, obs, act):
-        obs_img = torch.stack([o["observation"]["camera_bottom"] for o in obs])
+        obs_img = torch.stack([
+            torch.as_tensor(o["observation"]["camera_bottom"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
         obs_img_nom = obs_img / 255 - 0.5  # normalize
-        obs_lin = torch.stack([o["observation"]["joints_state"] for o in obs])
-        dgoal = torch.stack([o["desired_goal"] for o in obs])
+        obs_lin = torch.stack([
+            torch.as_tensor(o["observation"]["joints_state"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
+        dgoal = torch.stack([
+            torch.as_tensor(o["desired_goal"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
 
         feat = self.feat(self.cnn(obs_img_nom))
 
@@ -162,9 +186,7 @@ class MLPActorCritic(nn.Module):
                                device=device)
 
     def act(self, obs):
-        obs = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
-
         with torch.no_grad():
-            a = self.pi(obs.unsqueeze(dim=0))
+            a = self.pi([obs])
             return a.squeeze(dim=0).cpu().numpy()
             # return self.pi(obs).numpy()

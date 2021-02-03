@@ -436,6 +436,7 @@ def td3_her(env_fn,
             act = ep['act'][idx]
             obs2 = ep['obs2'][idx]
             info = ep['info'][idx]
+            np_agoal = obs2['achieved_goal'].cpu().numpy()
 
             for _ in range(num):
                 if selection_strategy == 'final':
@@ -453,9 +454,9 @@ def td3_her(env_fn,
                             selection_strategy))
 
                 sel_obs2 = ep['obs2'][sel_idx]
+                np_sel_agoal = sel_obs2['achieved_goal'].cpu().numpy()
 
-                rew = env.compute_reward(obs2["achieved_goal"],
-                                         sel_obs2["achieved_goal"], info)
+                rew = env.compute_reward(np_agoal, np_sel_agoal, info)
 
                 obs["desired_goal"] = sel_obs2["achieved_goal"]
 

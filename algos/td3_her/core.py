@@ -30,6 +30,7 @@ class MLPActor(nn.Module):
                  act_limit,
                  device=None):
         super(MLPActor, self).__init__()
+        self.device = device
 
         obs_dim = obs_space.spaces["observation"].shape[0]
         dgoal_dim = obs_space.spaces["desired_goal"].shape[0]
@@ -42,8 +43,16 @@ class MLPActor(nn.Module):
             self.pi.to(device)
 
     def forward(self, obs):
-        obs_lin = torch.stack([o["observation"] for o in obs])
-        dgoal = torch.stack([o["desired_goal"] for o in obs])
+        obs_lin = torch.stack([
+            torch.as_tensor(o["observation"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
+        dgoal = torch.stack([
+            torch.as_tensor(o["desired_goal"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
         # Return output from network scaled to action space limits.
         return self.act_limit * self.pi(torch.cat((obs_lin, dgoal), dim=-1))
 
@@ -56,19 +65,28 @@ class MLPQFunction(nn.Module):
                  activation,
                  device=None):
         super(MLPQFunction, self).__init__()
+        self.device = device
 
         obs_dim = obs_space.spaces["observation"].shape[0]
         dgoal_dim = obs_space.spaces["desired_goal"].shape[0]
 
-        self.q = mlp([obs_dim + dgoal_dim + act_dim] + list(hidden_sizes) + [1],
-                     activation)
+        self.q = mlp([obs_dim + dgoal_dim + act_dim] + list(hidden_sizes) +
+                     [1], activation)
 
         if device:
             self.q.to(device)
 
     def forward(self, obs, act):
-        obs_lin = torch.stack([o["observation"] for o in obs])
-        dgoal = torch.stack([o["desired_goal"] for o in obs])
+        obs_lin = torch.stack([
+            torch.as_tensor(o["observation"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
+        dgoal = torch.stack([
+            torch.as_tensor(o["desired_goal"],
+                            dtype=torch.float32,
+                            device=self.device) for o in obs
+        ])
 
         q = self.q(torch.cat([obs_lin, dgoal, act], dim=-1))
         return torch.squeeze(q, -1)  # Critical to ensure q has right shape.
@@ -107,9 +125,7 @@ class MLPActorCritic(nn.Module):
                                device=device)
 
     def act(self, obs):
-        obs = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
-
         with torch.no_grad():
-            a = self.pi(obs.unsqueeze(dim=0))
+            a = self.pi([obs])
             return a.squeeze(dim=0).cpu().numpy()
             # return self.pi(obs).numpy()
