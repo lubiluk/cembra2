@@ -6,8 +6,11 @@ from algos import td3_her_cam
 from algos.td3_her_cam import core
 from gym.wrappers.time_limit import TimeLimit
 
+
 def env_fn():
-    return TimeLimit(gym.make("PepperPushCam-v0", gui=False), max_episode_steps=100)
+    return TimeLimit(gym.make("PepperPushCam-v0", gui=False),
+                     max_episode_steps=100)
+
 
 ac_kwargs = dict(hidden_sizes=[128, 128],
                  activation=nn.ReLU,

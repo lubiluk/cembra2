@@ -1,18 +1,12 @@
-from stable_baselines3 import SAC
 import gym
-import gym_pepper
+from utils import wrappers
 from gym.wrappers.time_limit import TimeLimit
-from utils.pepper_preprocessing import PepperPreprocessing
 
-test_env = PepperPreprocessing(
-    TimeLimit(gym.make("PepperReachCam-v0", gui=True), max_episode_steps=100)
-)
-model = SAC.load("./data/1", env=test_env)
+from algos.test_policy import load_policy_and_env, run_policy
 
-obs = test_env.reset()
-for _ in range(1000):
-    action, _ = model.predict(obs, deterministic=True)
-    obs, reward, done, _ = test_env.step(action)
+_, get_action = load_policy_and_env('./data/1')
 
-    if done:
-        obs = test_env.reset()
+env = TimeLimit(gym.make("PepperReach-v0", gui=True, dense=True),
+                     max_episode_steps=100)
+
+run_policy(env, get_action)

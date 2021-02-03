@@ -18,16 +18,12 @@ class ReplayBuffer:
     def __init__(self, obs_space, act_dim, size, device=None):
         self.device = device
 
-        img_dim = obs_space.spaces["observation"]["camera_bottom"].shape
-        lin_dim = obs_space.spaces["observation"]["joints_state"].shape
+        obs_dim = obs_space.spaces["observation"].shape[0]
         goal_dim = obs_space.spaces["desired_goal"].shape[0]
 
-        self.obs_img_buf = torch.zeros(core.combined_shape(size, img_dim),
-                                       dtype=torch.float32,
-                                       device=device)
-        self.obs_lin_buf = torch.zeros(core.combined_shape(size, lin_dim),
-                                       dtype=torch.float32,
-                                       device=device)
+        self.obs_buf = torch.zeros(core.combined_shape(size, obs_dim),
+                                   dtype=torch.float32,
+                                   device=device)
         self.obs_dgoal_buf = torch.zeros(core.combined_shape(size, goal_dim),
                                          dtype=torch.float32,
                                          device=device)
@@ -39,12 +35,9 @@ class ReplayBuffer:
                                    dtype=torch.float32,
                                    device=device)
 
-        self.obs2_img_buf = torch.zeros(core.combined_shape(size, img_dim),
-                                        dtype=torch.float32,
-                                        device=device)
-        self.obs2_lin_buf = torch.zeros(core.combined_shape(size, lin_dim),
-                                        dtype=torch.float32,
-                                        device=device)
+        self.obs2_buf = torch.zeros(core.combined_shape(size, obs_dim),
+                                    dtype=torch.float32,
+                                    device=device)
         self.obs2_dgoal_buf = torch.zeros(core.combined_shape(size, goal_dim),
                                           dtype=torch.float32,
                                           device=device)
@@ -58,29 +51,22 @@ class ReplayBuffer:
         self.ptr, self.size, self.max_size = 0, 0, size
 
     def store(self, obs, act, rew, next_obs, done, info):
-        obs_img = obs["observation"]["camera_bottom"]
-        obs_lin = obs["observation"]["joints_state"]
+        obs_lin = obs["observation"]
         obs_dgoal = obs["desired_goal"]
         obs_agoal = obs["achieved_goal"]
 
-        next_obs_img = next_obs["observation"]["camera_bottom"]
-        next_obs_lin = next_obs["observation"]["joints_state"]
+        next_obs_lin = next_obs["observation"]
         next_obs_dgoal = next_obs["desired_goal"]
         next_obs_agoal = next_obs["achieved_goal"]
 
-        self.obs_img_buf[self.ptr] = torch.as_tensor(obs_img,
-                                                     dtype=torch.float32)
-        self.obs_lin_buf[self.ptr] = torch.as_tensor(obs_lin,
-                                                     dtype=torch.float32)
+        self.obs_buf[self.ptr] = torch.as_tensor(obs_lin, dtype=torch.float32)
         self.obs_dgoal_buf[self.ptr] = torch.as_tensor(obs_dgoal,
                                                        dtype=torch.float32)
         self.obs_agoal_buf[self.ptr] = torch.as_tensor(obs_agoal,
                                                        dtype=torch.float32)
 
-        self.obs2_img_buf[self.ptr] = torch.as_tensor(next_obs_img,
-                                                      dtype=torch.float32)
-        self.obs2_lin_buf[self.ptr] = torch.as_tensor(next_obs_lin,
-                                                      dtype=torch.float32)
+        self.obs2_buf[self.ptr] = torch.as_tensor(next_obs_lin,
+                                                  dtype=torch.float32)
         self.obs2_dgoal_buf[self.ptr] = torch.as_tensor(next_obs_dgoal,
                                                         dtype=torch.float32)
         self.obs2_agoal_buf[self.ptr] = torch.as_tensor(next_obs_agoal,
@@ -111,25 +97,17 @@ class ReplayBuffer:
 
     def _get_batch(self, idxs):
         obs = [{
-            "observation": {
-                "camera_bottom": c,
-                "joints_state": j
-            },
+            "observation": o,
             "desired_goal": dg,
             "achieved_goal": ag
-        } for c, j, dg, ag in
-               zip(self.obs_img_buf[idxs], self.obs_lin_buf[idxs],
-                   self.obs_dgoal_buf[idxs], self.obs_agoal_buf[idxs])]
+        } for o, dg, ag in zip(self.obs_buf[idxs], self.obs_dgoal_buf[idxs],
+                               self.obs_agoal_buf[idxs])]
         obs2 = [{
-            "observation": {
-                "camera_bottom": c,
-                "joints_state": j
-            },
+            "observation": o,
             "desired_goal": dg,
             "achieved_goal": ag
-        } for c, j, dg, ag in
-                zip(self.obs2_img_buf[idxs], self.obs2_lin_buf[idxs],
-                    self.obs2_dgoal_buf[idxs], self.obs2_agoal_buf[idxs])]
+        } for o, dg, ag in zip(self.obs2_buf[idxs], self.obs2_dgoal_buf[idxs],
+                               self.obs2_agoal_buf[idxs])]
 
         return dict(obs=obs,
                     obs2=obs2,
@@ -139,36 +117,36 @@ class ReplayBuffer:
                     info=self.info_buf[idxs])
 
 
-def td3_her_cam(env_fn,
-                actor_critic=core.MLPActorCritic,
-                ac_kwargs=dict(),
-                seed=0,
-                steps_per_epoch=4000,
-                epochs=100,
-                replay_size=int(1e6),
-                gamma=0.99,
-                polyak=0.995,
-                pi_lr=1e-3,
-                q_lr=1e-3,
-                batch_size=100,
-                start_steps=10000,
-                update_after=1000,
-                update_every=50,
-                act_noise=0.1,
-                target_noise=0.2,
-                noise_clip=0.5,
-                policy_delay=2,
-                num_test_episodes=10,
-                max_ep_len=1000,
-                logger_kwargs=dict(),
-                save_freq=1,
-                num_additional_goals=1,
-                goal_selection_strategy='final',
-                num_updates=None,
-                use_gpu_buffer=True,
-                use_gpu_computation=True):
+def td3_her(env_fn,
+            actor_critic=core.MLPActorCritic,
+            ac_kwargs=dict(),
+            seed=0,
+            steps_per_epoch=4000,
+            epochs=100,
+            replay_size=int(1e6),
+            gamma=0.99,
+            polyak=0.995,
+            pi_lr=1e-3,
+            q_lr=1e-3,
+            batch_size=100,
+            start_steps=10000,
+            update_after=1000,
+            update_every=50,
+            act_noise=0.1,
+            target_noise=0.2,
+            noise_clip=0.5,
+            policy_delay=2,
+            num_test_episodes=10,
+            max_ep_len=1000,
+            logger_kwargs=dict(),
+            save_freq=1,
+            num_additional_goals=1,
+            goal_selection_strategy='final',
+            num_updates=None,
+            use_gpu_buffer=True,
+            use_gpu_computation=True):
     """
-    Twin Delayed Deep Deterministic Policy Gradient (TD3) 
+    Twin Delayed Deep Deterministic Policy Gradient (TD3)
         with Hindsight Experience Repley (HER)
 
 
@@ -576,7 +554,7 @@ if __name__ == '__main__':
     from spinup.utils.run_utils import setup_logger_kwargs
     logger_kwargs = setup_logger_kwargs(args.exp_name, args.seed)
 
-    td3_her_cam(lambda: gym.make(args.env),
+    td3_her(lambda: gym.make(args.env),
             actor_critic=core.MLPActorCritic,
             ac_kwargs=dict(hidden_sizes=[args.hid] * args.l),
             gamma=args.gamma,
