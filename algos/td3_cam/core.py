@@ -80,14 +80,13 @@ class MLPActor(nn.Module):
                             dtype=torch.float32,
                             device=self.device) for o in obs
         ])
-        obs_img_nom = obs_img / 255 - 0.5  # normalize
         obs_lin = torch.stack([
             torch.as_tensor(o["joints_state"],
                             dtype=torch.float32,
                             device=self.device) for o in obs
         ])
 
-        feat = self.feat(self.cnn(obs_img_nom))
+        feat = self.feat(self.cnn(obs_img))
 
         # Return output from network scaled to action space limits.
         return self.act_limit * self.pi(torch.cat((feat, obs_lin), dim=-1))

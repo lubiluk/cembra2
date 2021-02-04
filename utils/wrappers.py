@@ -2,6 +2,7 @@
 import gym
 from gym.wrappers import TimeLimit
 import numpy as np
+from PIL import Image
 
 
 class DoneOnSuccessWrapper(gym.Wrapper):
@@ -40,8 +41,10 @@ class TimeFeatureWrapper(gym.Wrapper):
         assert isinstance(env.observation_space, gym.spaces.Box)
         # Add a time feature to the observation
         low, high = env.observation_space.low, env.observation_space.high
-        low, high= np.concatenate((low, [0])), np.concatenate((high, [1.]))
-        env.observation_space = gym.spaces.Box(low=low, high=high, dtype=np.float32)
+        low, high = np.concatenate((low, [0])), np.concatenate((high, [1.]))
+        env.observation_space = gym.spaces.Box(low=low,
+                                               high=high,
+                                               dtype=np.float32)
 
         super(TimeFeatureWrapper, self).__init__(env)
 
@@ -74,3 +77,74 @@ class TimeFeatureWrapper(gym.Wrapper):
             time_feature = 1.0
         # Optionnaly: concatenate [time_feature, time_feature ** 2]
         return np.concatenate((obs, [time_feature]))
+
+
+class GrayscaleWrapper(gym.ObservationWrapper):
+    def __init__(self, env):
+        """A gym wrapper that crops, scales image into the desired shapes and grayscales it."""
+        super(GrayscaleWrapper, self).__init__(env)
+
+        self.img_size = (120, 160, 1)
+
+        obs_spaces = dict(
+            camera_bottom=gym.spaces.Box(
+                0.0,
+                1.0,
+                shape=self.img_size,
+                dtype=np.float32,
+            ),
+            joints_state=self.observation_space.spaces["joints_state"],
+        )
+
+        self.observation_space = gym.spaces.Dict(obs_spaces)
+
+    def observation(self, obs):
+        """what happens to each observation"""
+
+        # Here's what you need to do:
+        #  * crop image, remove irrelevant parts
+        #  * resize image to self.img_size
+        #     (use imresize from any library you want,
+        #      e.g. opencv, skimage, PIL, keras)
+        #  * cast image to grayscale
+        #  * convert image pixels to (0,1) range, float32 type
+        img = obs["camera_bottom"]
+        img = Image.fromarray(img)
+        img = img.convert('L')
+        img = np.expand_dims(np.array(img, dtype=np.float32), axis=-1)
+        img = img / 255
+
+        obs["camera_bottom"] = img
+
+        return obs
+
+
+# in torch imgs have shape [c, h, w] instead of common [h, w, c]
+class AntiTorchWrapper(gym.ObservationWrapper):
+    def __init__(self, env):
+        super(AntiTorchWrapper, self).__init__(env)
+
+        self.img_size = [
+            env.observation_space.spaces["camera_bottom"].shape[i]
+            for i in [2, 0, 1]
+        ]
+
+        obs_spaces = dict(
+            camera_bottom=gym.spaces.Box(
+                0.0,
+                1.0,
+                shape=self.img_size,
+                dtype=np.float32,
+            ),
+            joints_state=self.observation_space.spaces["joints_state"],
+        )
+
+        self.observation_space = gym.spaces.Dict(obs_spaces)
+
+    def observation(self, obs):
+        """what happens to each observation"""
+        img = obs["camera_bottom"]
+        img = img.transpose(2, 0, 1)
+        obs["camera_bottom"] = img
+
+        return obs
