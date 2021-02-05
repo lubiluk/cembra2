@@ -44,7 +44,7 @@ class FrameBuffer(Wrapper):
         return obs, reward, done, info
 
     def update_buffer(self, img):
-        offset = self.observation_space.spaces["camera_bottom"].shape[0]
+        offset = self.env.observation_space.spaces["camera_bottom"].shape[0]
         axis = 0
         cropped_framebuffer = self.framebuffer[:-offset]
         self.framebuffer = np.concatenate(
