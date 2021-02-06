@@ -26,6 +26,7 @@ td3(env_fn=env_fn,
     gamma=0.99,
     pi_lr=0.001,
     q_lr=0.001,
+    polyak=0.995,
     update_after=100,
     update_every=1,
     logger_kwargs=logger_kwargs)

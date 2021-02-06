@@ -405,10 +405,7 @@ def td3_her(env_fn,
                     p_targ.data.add_((1 - polyak) * p.data)
 
     def get_action(o, noise_scale):
-        # eval() makes a difference when batch or layer norm is used
-        ac.eval()
         a = ac.act(o)
-        ac.train()
         a += noise_scale * np.random.randn(act_dim)
         return np.clip(a, -act_limit, act_limit)
 
