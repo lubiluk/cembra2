@@ -19,7 +19,8 @@ def env_fn():
 
 ac_kwargs = dict(hidden_sizes=[128, 128],
                  activation=nn.ReLU,
-                 conv_sizes=[[4, 32, 8, 4, 0], [32, 64, 4, 2, 0]])
+                 conv_sizes=[[4, 8, 2, 1, 0], [8, 16, 2, 1, 0]],
+                 feature_dim=32)
 
 logger_kwargs = dict(output_dir='data/2', exp_name='2')
 
