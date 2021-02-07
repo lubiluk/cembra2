@@ -5,15 +5,14 @@ import torch.nn as nn
 from algos import td3_cam
 from algos.td3_cam import core
 from gym.wrappers.time_limit import TimeLimit
-from utils.wrappers import GrayscaleWrapper, AntiTorchWrapper
+from utils.wrappers import TorchifyWrapper
 from utils.framebuffer import FrameBuffer
 
 
 def env_fn():
-    return FrameBuffer(AntiTorchWrapper(
-        GrayscaleWrapper(
+    return FrameBuffer(TorchifyWrapper(
             TimeLimit(gym.make("PepperReachCam-v0", gui=False, dense=True),
-                      max_episode_steps=100))),
+                      max_episode_steps=100)),
                        n_frames=4)
 
 

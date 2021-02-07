@@ -3,7 +3,8 @@ import gym
 from gym.wrappers import TimeLimit
 import numpy as np
 from PIL import Image
-
+import torch
+import matplotlib.pyplot as plt
 
 class DoneOnSuccessWrapper(gym.Wrapper):
     """
@@ -77,14 +78,13 @@ class TimeFeatureWrapper(gym.Wrapper):
             time_feature = 1.0
         # Optionnaly: concatenate [time_feature, time_feature ** 2]
         return np.concatenate((obs, [time_feature]))
+        
 
+class TorchifyWrapper(gym.ObservationWrapper):
+    def __init__(self, env, use_gpu=True):
+        super(TorchifyWrapper, self).__init__(env)
 
-class GrayscaleWrapper(gym.ObservationWrapper):
-    def __init__(self, env):
-        """A gym wrapper that crops, scales image into the desired shapes and grayscales it."""
-        super(GrayscaleWrapper, self).__init__(env)
-
-        self.img_size = (120, 160, 1)
+        self.img_size = (1, 120, 160)
 
         obs_spaces = dict(
             camera_bottom=gym.spaces.Box(
@@ -98,53 +98,27 @@ class GrayscaleWrapper(gym.ObservationWrapper):
 
         self.observation_space = gym.spaces.Dict(obs_spaces)
 
+        self.device = torch.device("cpu")
+
+        if torch.cuda.is_available():
+            if use_gpu:
+                self.device = torch.device("cuda")
+                print('\nUsing GPU preprocessing\n')
+
+
     def observation(self, obs):
         """what happens to each observation"""
 
-        # Here's what you need to do:
-        #  * crop image, remove irrelevant parts
-        #  * resize image to self.img_size
-        #     (use imresize from any library you want,
-        #      e.g. opencv, skimage, PIL, keras)
-        #  * cast image to grayscale
-        #  * convert image pixels to (0,1) range, float32 type
+        # Convert image to grayscale
         img = obs["camera_bottom"]
-        img = Image.fromarray(img)
-        img = img.convert('L')
-        img = np.expand_dims(np.array(img, dtype=np.float32), axis=-1)
+        img = torch.as_tensor(img, dtype=torch.float32, device=self.device)
+        img = torch.mean(img, dim=-1)
+        # img = np.expand_dims(np.array(img, dtype=np.float32), axis=-1)
+        # Normalize
         img = img / 255
+        # Add channel dimension
+        img = img.unsqueeze(0)
 
-        obs["camera_bottom"] = img
-
-        return obs
-
-
-# in torch imgs have shape [c, h, w] instead of common [h, w, c]
-class AntiTorchWrapper(gym.ObservationWrapper):
-    def __init__(self, env):
-        super(AntiTorchWrapper, self).__init__(env)
-
-        self.img_size = [
-            env.observation_space.spaces["camera_bottom"].shape[i]
-            for i in [2, 0, 1]
-        ]
-
-        obs_spaces = dict(
-            camera_bottom=gym.spaces.Box(
-                0.0,
-                1.0,
-                shape=self.img_size,
-                dtype=np.float32,
-            ),
-            joints_state=self.observation_space.spaces["joints_state"],
-        )
-
-        self.observation_space = gym.spaces.Dict(obs_spaces)
-
-    def observation(self, obs):
-        """what happens to each observation"""
-        img = obs["camera_bottom"]
-        img = img.transpose(2, 0, 1)
         obs["camera_bottom"] = img
 
         return obs
