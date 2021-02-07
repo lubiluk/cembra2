@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
@@ -5,14 +6,22 @@ from gym.core import Wrapper
 
 
 class FrameBuffer(Wrapper):
-    def __init__(self, env, n_frames=4):
+    def __init__(self, env, n_frames=4, use_gpu=True):
         """A gym wrapper that reshapes, crops and scales image into the desired shapes"""
         super(FrameBuffer, self).__init__(env)
 
-        n_channels, height, width = env.observation_space.spaces["camera_bottom"].shape
+        self.device = torch.device("cpu")
+
+        if torch.cuda.is_available():
+            if use_gpu:
+                self.device = torch.device("cuda")
+                print('\nUsing GPU framebuffer\n')
+
+        n_channels, height, width = env.observation_space.spaces[
+            "camera_bottom"].shape
         obs_shape = [n_channels * n_frames, height, width]
         self.observation_space = Box(0.0, 1.0, obs_shape)
-        self.framebuffer = np.zeros(obs_shape, 'float32')
+        self.framebuffer = torch.zeros(obs_shape, dtype=torch.float32, device=self.device)
 
         obs_spaces = dict(
             camera_bottom=spaces.Box(
@@ -28,7 +37,9 @@ class FrameBuffer(Wrapper):
 
     def reset(self):
         """resets, returns initial frames"""
-        self.framebuffer = np.zeros_like(self.framebuffer)
+        self.framebuffer = torch.zeros_like(self.framebuffer,
+                                            dtype=torch.float32,
+                                            device=self.device)
         obs = self.env.reset()
         new_img = obs["camera_bottom"]
         self.update_buffer(new_img)
@@ -38,7 +49,9 @@ class FrameBuffer(Wrapper):
     def step(self, action):
         """plays for 1 step, returns frame buffer"""
         obs, reward, done, info = self.env.step(action)
-        new_img = obs["camera_bottom"]
+        new_img = torch.as_tensor(obs["camera_bottom"],
+                                  dtype=torch.float32,
+                                  device=self.device)
         self.update_buffer(new_img)
         obs["camera_bottom"] = self.framebuffer
         return obs, reward, done, info
@@ -47,5 +60,4 @@ class FrameBuffer(Wrapper):
         offset = self.env.observation_space.spaces["camera_bottom"].shape[0]
         axis = 0
         cropped_framebuffer = self.framebuffer[:-offset]
-        self.framebuffer = np.concatenate(
-            [img, cropped_framebuffer], axis=axis)
+        self.framebuffer = torch.cat([img, cropped_framebuffer], dim=axis)

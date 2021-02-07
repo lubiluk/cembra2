@@ -2,9 +2,7 @@
 import gym
 from gym.wrappers import TimeLimit
 import numpy as np
-from PIL import Image
 import torch
-import matplotlib.pyplot as plt
 
 class DoneOnSuccessWrapper(gym.Wrapper):
     """
