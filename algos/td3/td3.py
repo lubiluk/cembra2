@@ -7,8 +7,6 @@ import gym
 import time
 from . import core
 from ..logx import EpochLogger
-from signal import *
-import sys
 
 
 class ReplayBuffer:
@@ -203,13 +201,6 @@ def td3(env_fn,
 
     env = env_fn()
     test_env = env
-
-    def clean(*args):
-        env.close()
-        sys.exit(0)
-
-    for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
-        signal(sig, clean)
 
     obs_dim = env.observation_space.shape
     act_dim = env.action_space.shape[0]
