@@ -36,7 +36,7 @@ class ReplayBuffer:
                                         dtype=torch.float32,
                                         device=device)
         self.rew_buf = torch.zeros(size, dtype=torch.float32, device=device)
-        self.done_buf = torch.zeros(size, dtype=torch.bool, device=device)
+        self.done_buf = torch.zeros(size, dtype=torch.float32, device=device)
         self.ptr, self.size, self.max_size = 0, 0, size
 
     def store(self, obs, act, rew, next_obs, done):
@@ -56,7 +56,7 @@ class ReplayBuffer:
                                                       dtype=torch.float32)
         self.act_buf[self.ptr] = torch.as_tensor(act, dtype=torch.float32)
         self.rew_buf[self.ptr] = torch.as_tensor(rew, dtype=torch.float32)
-        self.done_buf[self.ptr] = torch.as_tensor(done, dtype=torch.bool)
+        self.done_buf[self.ptr] = torch.as_tensor(done, dtype=torch.float32)
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
@@ -289,7 +289,7 @@ def td3_cam(env_fn,
             q1_pi_targ = ac_targ.q1(o2, a2)
             q2_pi_targ = ac_targ.q2(o2, a2)
             q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
-            backup = r + gamma * (1 - d.type(torch.int32)) * q_pi_targ
+            backup = r + gamma * (1 - d) * q_pi_targ
 
         # MSE loss against Bellman backup
         loss_q1 = ((q1 - backup)**2).mean()
