@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 from algos import td3_her
 from algos.td3_her import core
-from gym.wrappers.time_limit import TimeLimit
 from utils.wrappers import DoneOnSuccessWrapper
 
 
@@ -22,7 +21,7 @@ td3_her(env_fn=env_fn,
         ac_kwargs=ac_kwargs,
         steps_per_epoch=15000,
         max_ep_len=300,
-        epochs=200,
+        epochs=100,
         batch_size=256,
         replay_size=1000000,
         gamma=0.95,
