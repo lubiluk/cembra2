@@ -75,6 +75,7 @@ class MLPActor(nn.Module):
             self.pi.to(device)
 
     def forward(self, obs):
+        out_device = obs[0]["camera_bottom"].device
         obs_img = torch.stack([
             torch.as_tensor(o["camera_bottom"],
                             dtype=torch.float32,
@@ -89,7 +90,8 @@ class MLPActor(nn.Module):
         feat = self.feat(self.cnn(obs_img))
 
         # Return output from network scaled to action space limits.
-        return self.act_limit * self.pi(torch.cat((feat, obs_lin), dim=-1))
+        return self.act_limit * self.pi(torch.cat(
+            (feat, obs_lin), dim=-1)).to(out_device)
 
 
 class MLPQFunction(nn.Module):
@@ -119,6 +121,8 @@ class MLPQFunction(nn.Module):
             self.q.to(device)
 
     def forward(self, obs, act):
+        out_device = act.device
+
         obs_img = torch.stack([
             torch.as_tensor(o["camera_bottom"],
                             dtype=torch.float32,
@@ -133,8 +137,11 @@ class MLPQFunction(nn.Module):
 
         feat = self.feat(self.cnn(obs_img_nom))
 
+        act = torch.as_tensor(act, device=self.device)
+
         q = self.q(torch.cat((feat, obs_lin, act), dim=-1))
-        return torch.squeeze(q, -1)  # Critical to ensure q has right shape.
+        return torch.squeeze(q, -1).to(
+            out_device)  # Critical to ensure q has right shape.
 
 
 class MLPActorCritic(nn.Module):

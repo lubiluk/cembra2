@@ -376,7 +376,7 @@ def td3_cam(env_fn,
 
     # Main loop: collect experience in env and update/log each epoch
     for t in range(total_steps):
-
+        it_start_time = time.time()
         # Until start_steps have elapsed, randomly sample actions
         # from a uniform distribution for better exploration. Afterwards,
         # use the learned policy (with some noise, via act_noise).
@@ -413,6 +413,8 @@ def td3_cam(env_fn,
                 batch = replay_buffer.sample_batch(batch_size)
                 update(data=batch, timer=j)
 
+        logger.store(iteration_time=time.time() - it_start_time)
+
         # End of epoch handling
         if (t + 1) % steps_per_epoch == 0:
             epoch = (t + 1) // steps_per_epoch
@@ -436,6 +438,7 @@ def td3_cam(env_fn,
             logger.log_tabular('LossPi', average_only=True)
             logger.log_tabular('LossQ', average_only=True)
             logger.log_tabular('Time', time.time() - start_time)
+            logger.log_tabular('iteration_time', with_min_and_max=True)
             logger.dump_tabular()
 
 

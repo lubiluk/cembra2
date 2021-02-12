@@ -312,12 +312,12 @@ class EpochLogger(Logger, object):
             v = self.epoch_dict[key]
             vals = np.concatenate(v) if isinstance(v[0], np.ndarray) and len(v[0].shape)>0 else v
             stats = mpi_statistics_scalar(vals, with_min_and_max=with_min_and_max)
-            super(EpochLogger, self).log_tabular(key if average_only else 'Average' + key, stats[0])
+            super(EpochLogger, self).log_tabular(key if average_only else 'avg ' + key, stats[0])
             if not(average_only):
-                super(EpochLogger, self).log_tabular('Std'+key, stats[1])
+                super(EpochLogger, self).log_tabular('std '+key, stats[1])
             if with_min_and_max:
-                super(EpochLogger, self).log_tabular('Max'+key, stats[3])
-                super(EpochLogger, self).log_tabular('Min'+key, stats[2])
+                super(EpochLogger, self).log_tabular('max '+key, stats[3])
+                super(EpochLogger, self).log_tabular('min '+key, stats[2])
         self.epoch_dict[key] = []
 
     def get_stats(self, key):
