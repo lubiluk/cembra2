@@ -5,7 +5,7 @@ import torch.nn as nn
 from stable_baselines3 import HER, SAC
 from utils.wrappers import DoneOnSuccessWrapper
 
-env = DoneOnSuccessWrapper(gym.make("FetchPush-v1"))
+env = gym.make("FetchReach-v1")
 
 policy_kwargs = dict(
     activation_fn=th.nn.ReLU,
@@ -31,7 +31,7 @@ model = HER(
     train_freq=1,
 )
 
-model.learn(1000000)
+model.learn(20000)
 
 model.save("./data/sanity_3")
 

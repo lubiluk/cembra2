@@ -233,7 +233,7 @@ class Logger:
             print("-"*n_slashes)
             for key in self.log_headers:
                 val = self.log_current_row.get(key, "")
-                valstr = "%8.3g"%val if hasattr(val, "__float__") else val
+                valstr = "%.3f"%val if isinstance(val, np.floating) or isinstance(val, float) else val
                 print(fmt%(key, valstr))
                 vals.append(val)
             print("-"*n_slashes)
