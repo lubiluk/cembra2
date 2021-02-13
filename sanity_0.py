@@ -6,13 +6,9 @@ from stable_baselines3.sac import MlpPolicy
 
 env = gym.make('Pendulum-v0')
 
-# model = SAC(MlpPolicy, env, verbose=1)
-# model.learn(total_timesteps=10000, log_interval=4)
-# model.save("data/sanity_0")
-
-# del model  # remove to demonstrate saving and loading
-
-model = SAC.load("data/sanity_0")
+model = SAC(MlpPolicy, env, verbose=1)
+model.learn(total_timesteps=10000, log_interval=4)
+model.save("data/sanity_0")
 
 obs = env.reset()
 while True:

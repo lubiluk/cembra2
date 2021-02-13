@@ -65,7 +65,7 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
     # make function for producing an action given a single state
     def get_action(x):
         with torch.no_grad():
-            action = model.act(x)
+            action = model.act(x, deterministic=deterministic)
         return action
 
     return get_action
