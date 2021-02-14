@@ -3,7 +3,7 @@ import numpy as np
 from .utils import combined_shape
 
 
-class HerReplayBuffer:
+class ReplayBuffer:
     """
     A simple FIFO experience replay buffer for HER agents.
     """

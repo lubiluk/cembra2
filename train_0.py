@@ -7,6 +7,7 @@ from algos.sac import core
 from algos.common import replay_buffer
 from gym.wrappers.time_limit import TimeLimit
 
+
 env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
                 max_episode_steps=100)
 

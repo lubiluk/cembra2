@@ -4,24 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions.normal import Normal
-
-
-def combined_shape(length, shape=None):
-    if shape is None:
-        return (length, )
-    return (length, shape) if np.isscalar(shape) else (length, ) + shape
-
-
-def mlp(sizes, activation, output_activation=nn.Identity):
-    layers = []
-    for j in range(len(sizes) - 1):
-        act = activation if j < len(sizes) - 2 else output_activation
-        layers += [nn.Linear(sizes[j], sizes[j + 1]), act()]
-    return nn.Sequential(*layers)
-
-
-def count_vars(module):
-    return sum([np.prod(p.shape) for p in module.parameters()])
+from ..common.utils import mlp
 
 
 LOG_STD_MAX = 2
@@ -50,6 +33,8 @@ class SquashedGaussianMLPActor(nn.Module):
             self.log_std_layer.to(device)
 
     def forward(self, obs, deterministic=False, with_logprob=True):
+        obs = obs.to(self.device)
+
         net_out = self.net(obs)
         mu = self.mu_layer(net_out)
         log_std = self.log_std_layer(net_out)
@@ -100,6 +85,9 @@ class MLPQFunction(nn.Module):
             self.q.to(device)
 
     def forward(self, obs, act):
+        obs = obs.to(self.device)
+        act = act.to(self.device)
+
         q = self.q(torch.cat([obs, act], dim=-1))
         return torch.squeeze(q, -1)  # Critical to ensure q has right shape.
 
@@ -138,7 +126,7 @@ class MLPActorCritic(nn.Module):
                                device=device)
 
     def act(self, obs, deterministic=False):
-        obs = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
+        obs = torch.as_tensor(obs, dtype=torch.float32)
 
         with torch.no_grad():
             a, _ = self.pi(obs.unsqueeze(dim=0), deterministic, False)

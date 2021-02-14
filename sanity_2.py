@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from algos import SAC
 from algos.sac import core_her
-from algos.common import her_replay_buffer
+from algos.common import replay_buffer_her
 
 env = gym.make("FetchReach-v1")
 
@@ -19,7 +19,7 @@ logger_kwargs = dict(output_dir='data/sanity_2', exp_name='sanity_2')
 model = SAC(env=env,
     actor_critic=core_her.MLPActorCritic,
     ac_kwargs=ac_kwargs,
-    replay_buffer=her_replay_buffer.HerReplayBuffer,
+    replay_buffer=replay_buffer_her.ReplayBuffer,
     rb_kwargs=rb_kwargs,
     max_ep_len=10000,
     batch_size=256,

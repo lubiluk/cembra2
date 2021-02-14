@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions.normal import Normal
-from ..common.utils import mlp
+from ..common.utils import mlp, cnn
 
 LOG_STD_MAX = 2
 LOG_STD_MIN = -20
@@ -14,6 +14,8 @@ class SquashedGaussianMLPActor(nn.Module):
     def __init__(self,
                  obs_space,
                  act_dim,
+                 conv_sizes,
+                 feature_dim,
                  hidden_sizes,
                  activation,
                  act_limit,
@@ -21,25 +23,32 @@ class SquashedGaussianMLPActor(nn.Module):
         super(SquashedGaussianMLPActor, self).__init__()
         self.device = device
 
-        obs_dim = obs_space.spaces["observation"].shape[0]
-        dgoal_dim = obs_space.spaces["desired_goal"].shape[0]
+        cam_space = obs_space.spaces["camera_bottom"]
+        joints_dim = obs_space.spaces["joints_state"].shape[0]
 
-        self.net = mlp([obs_dim + dgoal_dim] + list(hidden_sizes), activation,
-                       activation)
+        self.cnn, self.feat = cnn(conv_sizes, activation, feature_dim,
+                                  cam_space)
+        self.net = mlp([feature_dim + joints_dim] + list(hidden_sizes),
+                       activation, activation)
         self.mu_layer = nn.Linear(hidden_sizes[-1], act_dim)
         self.log_std_layer = nn.Linear(hidden_sizes[-1], act_dim)
         self.act_limit = act_limit
 
         if device:
+            self.cnn.to(device)
+            self.feat.to(device)
             self.net.to(device)
             self.mu_layer.to(device)
             self.log_std_layer.to(device)
 
     def forward(self, obs, deterministic=False, with_logprob=True):
-        obs_lin = obs["observation"].to(self.device)
-        dgoal = obs["desired_goal"].to(self.device)
+        out_device = obs["camera_bottom"][0].device
+        obs_img = obs["camera_bottom"].to(self.device)
+        obs_lin = obs["joints_state"].to(self.device)
 
-        net_out = self.net(torch.cat((obs_lin, dgoal), dim=-1))
+        feat = self.feat(self.cnn(obs_img))
+
+        net_out = self.net(torch.cat((feat, obs_lin), dim=-1))
         mu = self.mu_layer(net_out)
         log_std = self.log_std_layer(net_out)
         log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
@@ -69,35 +78,48 @@ class SquashedGaussianMLPActor(nn.Module):
         pi_action = torch.tanh(pi_action)
         pi_action = self.act_limit * pi_action
 
-        return pi_action, logp_pi
+        return pi_action.to(out_device), logp_pi
 
 
 class MLPQFunction(nn.Module):
     def __init__(self,
                  obs_space,
                  act_dim,
+                 conv_sizes,
+                 feature_dim,
                  hidden_sizes,
                  activation,
                  device=None):
         super(MLPQFunction, self).__init__()
+
         self.device = device
 
-        obs_dim = obs_space.spaces["observation"].shape[0]
-        dgoal_dim = obs_space.spaces["desired_goal"].shape[0]
+        cam_space = obs_space.spaces["camera_bottom"]
+        joints_dim = obs_space.spaces["joints_state"].shape[0]
 
-        self.q = mlp([obs_dim + dgoal_dim + act_dim] + list(hidden_sizes) +
-                     [1], activation)
+        self.cnn, self.feat = cnn(conv_sizes, activation, feature_dim,
+                                  cam_space)
+        self.q = mlp([feature_dim + joints_dim + act_dim] +
+                     list(hidden_sizes) + [1], activation)
 
         if device:
+            self.cnn.to(device)
+            self.feat.to(device)
             self.q.to(device)
 
     def forward(self, obs, act):
-        obs_lin = obs["observation"].to(self.device)
-        dgoal = obs["desired_goal"].to(self.device)
+        out_device = act.device
+
+        obs_img = obs["camera_bottom"].to(self.device)
+        obs_lin = obs["joints_state"].to(self.device)
+
+        feat = self.feat(self.cnn(obs_img))
+
         act = act.to(self.device)
 
-        q = self.q(torch.cat([obs_lin, dgoal, act], dim=-1))
-        return torch.squeeze(q, -1)  # Critical to ensure q has right shape.
+        q = self.q(torch.cat((feat, obs_lin, act), dim=-1))
+        return torch.squeeze(q, -1).to(
+            out_device)  # Critical to ensure q has right shape.
 
 
 class MLPActorCritic(nn.Module):
@@ -106,6 +128,8 @@ class MLPActorCritic(nn.Module):
                  action_space,
                  hidden_sizes=(256, 256),
                  activation=nn.ReLU,
+                 conv_sizes=((3, 32, 8, 4, 0), (32, 64, 4, 2, 0)),
+                 feature_dim=256,
                  device=None):
         super(MLPActorCritic, self).__init__()
 
@@ -117,26 +141,33 @@ class MLPActorCritic(nn.Module):
         # build policy and value functions
         self.pi = SquashedGaussianMLPActor(observation_space,
                                            act_dim,
+                                           conv_sizes,
+                                           feature_dim,
                                            hidden_sizes,
                                            activation,
                                            act_limit,
                                            device=device)
         self.q1 = MLPQFunction(observation_space,
                                act_dim,
+                               conv_sizes,
+                               feature_dim,
                                hidden_sizes,
                                activation,
                                device=device)
         self.q2 = MLPQFunction(observation_space,
                                act_dim,
+                               conv_sizes,
+                               feature_dim,
                                hidden_sizes,
                                activation,
                                device=device)
 
     def act(self, obs, deterministic=False):
-        with torch.no_grad():
-            obs["observation"] = torch.as_tensor(obs["observation"], dtype=torch.float32).unsqueeze(dim=0)
-            obs["desired_goal"] = torch.as_tensor(obs["desired_goal"], dtype=torch.float32).unsqueeze(dim=0)
-            obs["achieved_goal"] = torch.as_tensor(obs["achieved_goal"], dtype=torch.float32).unsqueeze(dim=0)
+        obs = {
+            "camera_bottom": obs["camera_bottom"].unsqueeze(dim=0),
+            "joints_state": obs["joints_state"].unsqueeze(dim=0),
+        }
 
+        with torch.no_grad():
             a, _ = self.pi(obs, deterministic, False)
             return a.squeeze(dim=0).cpu().numpy()
