@@ -164,8 +164,8 @@ class MLPActorCritic(nn.Module):
 
     def act(self, obs, deterministic=False):
         obs = {
-            "camera_bottom": obs["camera_bottom"].unsqueeze(dim=0),
-            "joints_state": obs["joints_state"].unsqueeze(dim=0),
+            "camera_bottom": torch.as_tensor(obs["camera_bottom"], dtype=torch.float32).unsqueeze(dim=0),
+            "joints_state": torch.as_tensor(obs["joints_state"], dtype=torch.float32).unsqueeze(dim=0),
         }
 
         with torch.no_grad():

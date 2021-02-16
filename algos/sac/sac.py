@@ -321,6 +321,7 @@ class SAC:
         start_time = time.time()
         o, ep_ret, ep_len = self.env.reset(), 0, 0
         self.rb.start_episode()
+        test_ep_return = None
 
         # Main loop: collect experience in env and update/log each epoch
         for t in range(total_steps):
@@ -376,6 +377,8 @@ class SAC:
                 # Test the performance of the deterministic version of the agent.
                 self.test_agent()
 
+                test_ep_return = self.logger.get_stats('test_ep_return')
+
                 # Log info about epoch
                 self.logger.log_tabular('epoch', epoch)
                 if "success_rate" in self.logger.epoch_dict:
@@ -391,3 +394,5 @@ class SAC:
                                         time.time() - start_time)
                 self.logger.log_tabular('iteration_time', average_only=True)
                 self.logger.dump_tabular()
+
+        return test_ep_return
