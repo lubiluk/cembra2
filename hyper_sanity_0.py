@@ -64,7 +64,7 @@ def eval(individual):
                 polyak=individual["polyak"],
                 start_steps=individual["start_steps"],
                 update_after=individual["batch_size"],
-                # update_every=individual["update_every"],
+                update_every=1,
                 num_updates=individual["num_updates"],
                 logger_kwargs=logger_kwargs)
 

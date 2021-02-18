@@ -21,8 +21,10 @@ def rand_individual():
         "start_steps": random.randint(1, 100000),
         # "update_every": 2**random.randint(1, 12),
         "num_updates": 2**random.randint(0, 12),
-        "nn_width": [2**random.randint(0, 12) for _ in range(depth)],
-        "nn_depth": depth,
+        "nn_width": 2**random.randint(0, 12),
+        "nn_depth": random.randint(1, 10),
+        "conv_width": 2**random.randint(0, 12),
+        "conv_depth": random.randint(1, 10),
         "conv_sizes":
         [random.randint(1, 128)] + random.sample(range(1, 11), 3),
         "feature_dim": 2**random.randint(1, 12)

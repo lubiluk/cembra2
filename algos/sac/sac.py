@@ -404,7 +404,7 @@ class SAC:
                 self.logger.log_tabular("iteration_time", average_only=True)
                 self.logger.dump_tabular()
 
-                if test_ep_return is not None and test_ep_return >= stop_return:
+                if stop_return is not None and test_ep_return >= stop_return:
                     self.logger.log("\nStopping early\n")
                     break
 
