@@ -140,8 +140,8 @@ class SAC:
         """
         self.logger = EpochLogger(**logger_kwargs)
         config = locals()
-        config['env'] = str(config['env'])
-        config['self'] = "SAC"
+        config["env"] = str(config["env"])
+        config["self"] = "SAC"
         self.logger.save_config(config)
 
         buff_device = torch.device("cpu")
@@ -150,13 +150,13 @@ class SAC:
         if torch.cuda.is_available():
             if use_gpu_buffer:
                 buff_device = torch.device("cuda")
-                self.logger.log('\nUsing GPU replay buffer\n')
+                self.logger.log("\nUsing GPU replay buffer\n")
 
             if use_gpu_computation:
                 comp_device = torch.device("cuda")
-                self.logger.log('\nUsing GPU computaion\n')
+                self.logger.log("\nUsing GPU computaion\n")
         else:
-            self.logger.log('\nGPU unavailable\n')
+            self.logger.log("\nGPU unavailable\n")
 
         torch.manual_seed(seed)
         np.random.seed(seed)
@@ -192,7 +192,8 @@ class SAC:
             p.requires_grad = False
 
         # List of parameters for both Q-networks (save this for convenience)
-        self.q_params = itertools.chain(self.ac.q1.parameters(), self.ac.q2.parameters())
+        self.q_params = itertools.chain(self.ac.q1.parameters(),
+                                        self.ac.q2.parameters())
 
         # Experience buffer
         self.rb = replay_buffer(obs_space=env.observation_space,
@@ -203,9 +204,10 @@ class SAC:
 
         # Count variables (protip: try to get a feel for how different size networks behave!)
         var_counts = tuple(
-            count_vars(module) for module in [self.ac.pi, self.ac.q1, self.ac.q2])
+            count_vars(module)
+            for module in [self.ac.pi, self.ac.q1, self.ac.q2])
         self.logger.log(
-            '\nNumber of parameters: \t pi: %d, \t q1: %d, \t q2: %d\n' %
+            "\nNumber of parameters: \t pi: %d, \t q1: %d, \t q2: %d\n" %
             var_counts)
 
         # Set up optimizers for policy and q-function
@@ -217,8 +219,8 @@ class SAC:
 
     # Set up function for computing SAC Q-losses
     def compute_loss_q(self, data):
-        o, a, r, o2, d = data['obs'], data['act'], data['rew'], data[
-            'obs2'], data['done']
+        o, a, r, o2, d = data["obs"], data["act"], data["rew"], data[
+            "obs2"], data["done"]
 
         q1 = self.ac.q1(o, a)
         q2 = self.ac.q2(o, a)
@@ -248,7 +250,7 @@ class SAC:
 
     # Set up function for computing SAC pi loss
     def compute_loss_pi(self, data):
-        o = data['obs']
+        o = data["obs"]
         pi, logp_pi = self.ac.pi(o)
         q1_pi = self.ac.q1(o, pi)
         q2_pi = self.ac.q2(o, pi)
@@ -272,7 +274,7 @@ class SAC:
         # Record things
         self.logger.store(loss_q=loss_q.item(), **q_info)
 
-        # Freeze Q-networks so you don't waste computational effort
+        # Freeze Q-networks so you don"t waste computational effort
         # computing gradients for them during the policy learning step.
         for p in self.q_params:
             p.requires_grad = False
@@ -315,7 +317,14 @@ class SAC:
             if "is_success" in i:
                 self.logger.store(success_rate=i["is_success"])
 
-    def train(self, steps_per_epoch, epochs):
+    def train(
+        self,
+        steps_per_epoch,
+        epochs,
+        stop_return=None,
+        abort_after_epoch=None,
+        abort_return_threshold=0.1
+    ):
         # Prepare for interaction with environment
         total_steps = steps_per_epoch * epochs
         start_time = time.time()
@@ -340,8 +349,8 @@ class SAC:
             ep_len += 1
 
             # Ignore the "done" signal if it comes from hitting the time
-            # horizon (that is, when it's an artificial terminal signal
-            # that isn't based on the agent's state)
+            # horizon (that is, when it"s an artificial terminal signal
+            # that isn"t based on the agent"s state)
             d = False if ep_len == self.max_ep_len else d
 
             # Store experience to replay buffer
@@ -372,27 +381,35 @@ class SAC:
 
                 # Save model
                 if (epoch % self.save_freq == 0) or (epoch == epochs):
-                    self.logger.save_state({'env': self.env}, None)
+                    self.logger.save_state({"env": self.env}, None)
 
                 # Test the performance of the deterministic version of the agent.
                 self.test_agent()
 
-                test_ep_return = self.logger.get_stats('test_ep_return')
+                test_ep_return = self.logger.get_stats("test_ep_return")[0]
 
                 # Log info about epoch
-                self.logger.log_tabular('epoch', epoch)
+                self.logger.log_tabular("epoch", epoch)
                 if "success_rate" in self.logger.epoch_dict:
-                    self.logger.log_tabular('success_rate', average_only=True)
-                self.logger.log_tabular('ep_return', average_only=True)
-                self.logger.log_tabular('test_ep_return', average_only=True)
-                self.logger.log_tabular('ep_length', average_only=True)
-                self.logger.log_tabular('test_ep_length', average_only=True)
-                self.logger.log_tabular('total_timesteps', t)
-                self.logger.log_tabular('loss_pi', average_only=True)
-                self.logger.log_tabular('loss_q', average_only=True)
-                self.logger.log_tabular('time_elapsed',
+                    self.logger.log_tabular("success_rate", average_only=True)
+                self.logger.log_tabular("ep_return", average_only=True)
+                self.logger.log_tabular("test_ep_return", average_only=True)
+                self.logger.log_tabular("ep_length", average_only=True)
+                self.logger.log_tabular("test_ep_length", average_only=True)
+                self.logger.log_tabular("total_timesteps", t)
+                self.logger.log_tabular("loss_pi", average_only=True)
+                self.logger.log_tabular("loss_q", average_only=True)
+                self.logger.log_tabular("time_elapsed",
                                         time.time() - start_time)
-                self.logger.log_tabular('iteration_time', average_only=True)
+                self.logger.log_tabular("iteration_time", average_only=True)
                 self.logger.dump_tabular()
+
+                if test_ep_return is not None and test_ep_return >= stop_return:
+                    self.logger.log("\nStopping early\n")
+                    break
+
+                if abort_after_epoch is not None and epoch >= abort_after_epoch and test_ep_return < abort_return_threshold:
+                    self.logger.log("\nAborting ineffectivse training\n")
+                    break
 
         return test_ep_return

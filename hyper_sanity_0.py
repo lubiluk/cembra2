@@ -8,6 +8,7 @@ from algos import SAC
 from algos.sac import core
 from algos.common import replay_buffer
 import numpy
+from scoop import futures
 
 
 def rand_individual():
@@ -49,7 +50,7 @@ def eval(individual):
                      activation=nn.ReLU)
     rb_kwargs = dict(size=1000000)
 
-    logger_kwargs = dict(output_dir='data/sanity_1', exp_name='sanity_1')
+    logger_kwargs = dict(output_dir='data/hyper_sanity_0', exp_name='hyper_sanity_0')
 
     model = SAC(env=env,
                 actor_critic=core.MLPActorCritic,
@@ -101,12 +102,13 @@ toolbox.register("evaluate", eval)
 toolbox.register("mate", cx)
 toolbox.register("mutate", mut)
 toolbox.register("select", tools.selNSGA2)
+toolbox.register("map", futures.map)
 
 
 def main():
-    NGEN = 50
-    MU = 50
-    LAMBDA = 100
+    NGEN = 10
+    MU = 10
+    LAMBDA = 20
     CXPB = 0.7
     MUTPB = 0.2
 
