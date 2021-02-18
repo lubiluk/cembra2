@@ -126,7 +126,7 @@ toolbox.register("select", tools.selNSGA2)
 
 
 def main():
-    NGEN = 10
+    NGEN = 20
     MU = 10
     LAMBDA = 20
     CXPB = 0.5
