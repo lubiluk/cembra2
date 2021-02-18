@@ -8,7 +8,9 @@ from algos import SAC
 from algos.sac import core_cam
 from algos.common import replay_buffer_cam
 import numpy
-from scoop import futures
+from gym.wrappers.time_limit import TimeLimit
+from utils.wrappers import TorchifyWrapper
+import pickle
 
 
 def rand_individual():
@@ -19,14 +21,13 @@ def rand_individual():
         "polyak": random.random(),
         "lr": random.uniform(0.0, 0.1),
         "start_steps": random.randint(1, 100000),
-        # "update_every": 2**random.randint(1, 12),
         "num_updates": 2**random.randint(0, 12),
         "nn_width": 2**random.randint(0, 12),
         "nn_depth": random.randint(1, 10),
-        "conv_width": 2**random.randint(0, 12),
         "conv_depth": random.randint(1, 10),
-        "conv_sizes":
-        [random.randint(1, 128)] + random.sample(range(1, 11), 3),
+        "conv_channels": 2**random.randint(0, 8),
+        "conv_kernel": random.randint(1, 32),
+        "conv_stride": random.randint(1, 32),
         "feature_dim": 2**random.randint(1, 12)
     }
 
@@ -44,45 +45,49 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 
 def eval(individual):
-    env = gym.make('Pendulum-v0')
+    env = TorchifyWrapper(
+        TimeLimit(gym.make("PepperReachCam-v0", gui=False, dense=True),
+                  max_episode_steps=100))
 
     n_channel = 1
     conv_lrs = []
 
-    for s in individual["conv_sizes"]:
-        conv_lrs.append((n_channel, s[0], s[1], s[2], s[3]))
-        n_channel = s[0]
+    for _ in range(individual["conv_depth"]):
+        conv_lrs.append(
+            (n_channel, individual["conv_channels"], individual["conv_kernel"],
+             individual["conv_stride"], 0))
+        n_channel = individual["conv_channels"]
 
     ac_kwargs = dict(hidden_sizes=[
-        individual["nn_width"][i] for i in range(individual["nn_depth"])
+        individual["nn_width"] for _ in range(individual["nn_depth"])
     ],
                      activation=nn.ReLU,
                      conv_sizes=conv_lrs,
                      feature_dim=individual["feature_dim"])
     rb_kwargs = dict(size=1000)
 
-    logger_kwargs = dict(output_dir='data/hyper_sanity_0',
-                         exp_name='hyper_sanity_0')
-
-    model = SAC(env=env,
-                actor_critic=core_cam.MLPActorCritic,
-                ac_kwargs=ac_kwargs,
-                replay_buffer=replay_buffer_cam.ReplayBuffer,
-                rb_kwargs=rb_kwargs,
-                max_ep_len=100,
-                batch_size=individual["batch_size"],
-                gamma=individual["gamma"],
-                lr=individual["lr"],
-                polyak=individual["polyak"],
-                start_steps=individual["start_steps"],
-                update_after=individual["batch_size"],
-                update_every=1,
-                num_updates=individual["num_updates"],
-                logger_kwargs=logger_kwargs)
+    logger_kwargs = dict(output_dir='data/hyper_train_0',
+                         exp_name='hyper_train_0')
 
     ret = 0.0
 
     try:
+        model = SAC(env=env,
+                    actor_critic=core_cam.MLPActorCritic,
+                    ac_kwargs=ac_kwargs,
+                    replay_buffer=replay_buffer_cam.ReplayBuffer,
+                    rb_kwargs=rb_kwargs,
+                    max_ep_len=100,
+                    batch_size=individual["batch_size"],
+                    gamma=individual["gamma"],
+                    lr=individual["lr"],
+                    polyak=individual["polyak"],
+                    start_steps=individual["start_steps"],
+                    update_after=individual["batch_size"],
+                    update_every=1,
+                    num_updates=individual["num_updates"],
+                    logger_kwargs=logger_kwargs)
+
         ret = model.train(steps_per_epoch=10000,
                           epochs=500,
                           stop_return=0.8,
@@ -118,15 +123,14 @@ toolbox.register("evaluate", eval)
 toolbox.register("mate", cx)
 toolbox.register("mutate", mut)
 toolbox.register("select", tools.selNSGA2)
-toolbox.register("map", futures.map)
 
 
 def main():
     NGEN = 10
     MU = 10
     LAMBDA = 20
-    CXPB = 0.7
-    MUTPB = 0.2
+    CXPB = 0.5
+    MUTPB = 0.5
 
     pop = toolbox.population(n=MU)
     hof = tools.ParetoFront()
@@ -136,7 +140,7 @@ def main():
     stats.register("min", numpy.min, axis=0)
     stats.register("max", numpy.max, axis=0)
 
-    algorithms.eaMuPlusLambda(pop,
+    logbook = algorithms.eaMuPlusLambda(pop,
                               toolbox,
                               MU,
                               LAMBDA,
@@ -144,10 +148,14 @@ def main():
                               MUTPB,
                               NGEN,
                               stats,
-                              halloffame=hof)
+                              halloffame=hof,
+                              verbose=True)
+
+    with open("data/hyper_train_0_logbook.pickle", "wb") as output_file:
+        pickle.dump(logbook, output_file)
 
     return pop, stats, hof
 
 
 if __name__ == "__main__":
-    main()
+    pop, stats, hof = main()
