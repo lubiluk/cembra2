@@ -64,7 +64,7 @@ def eval(individual):
                      activation=nn.ReLU,
                      conv_sizes=conv_lrs,
                      feature_dim=individual["feature_dim"])
-    rb_kwargs = dict(size=1000)
+    rb_kwargs = dict(size=30000)
 
     logger_kwargs = dict(output_dir='data/hyper_train_0',
                          exp_name='hyper_train_0')
