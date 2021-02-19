@@ -7,15 +7,16 @@ from algos.sac import core_cam
 from algos.common import replay_buffer_cam
 from gym.wrappers.time_limit import TimeLimit
 from utils.wrappers import TorchifyWrapper
-
+from gym_recording.wrappers import TraceRecordingWrapper
 
 env = TorchifyWrapper(
-    TimeLimit(gym.make("PepperReachCam-v0", gui=False, dense=True),
-              max_episode_steps=100))
+    TraceRecordingWrapper(
+        TimeLimit(gym.make("PepperReachCam-v0", gui=False, dense=True),
+                  max_episode_steps=100), directory='./data/traces'))
 
-ac_kwargs = dict(hidden_sizes=[128, 128],
+ac_kwargs = dict(hidden_sizes=[64, 64],
                  activation=nn.ReLU,
-                 conv_sizes=[[1, 8, 2, 1, 0], [8, 16, 2, 1, 0]],
+                 conv_sizes=[[1, 4, 4, 1, 0], [4, 4, 4, 1, 0]],
                  feature_dim=32)
 rb_kwargs = dict(size=30000)
 
@@ -34,7 +35,7 @@ model = SAC(env=env,
             update_every=256,
             logger_kwargs=logger_kwargs)
 
-model.train(steps_per_epoch=1000, epochs=100)
+model.train(steps_per_epoch=10000, epochs=500, stop_return=0.8)
 
 from algos.test_policy import load_policy_and_env, run_policy
 
