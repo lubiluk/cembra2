@@ -7,16 +7,15 @@ from algos.sac import core_cam
 from algos.common import replay_buffer_cam
 from gym.wrappers.time_limit import TimeLimit
 from utils.wrappers import TorchifyWrapper
-from gym_recording.wrappers import TraceRecordingWrapper
+# from gym_recording.wrappers import TraceRecordingWrappe
 
 torch.backends.cudnn.benchmark = True
 torch.autograd.set_detect_anomaly(False)
 torch.autograd.profiler.profile(enabled=False)
 
 env = TorchifyWrapper(
-    TraceRecordingWrapper(
         TimeLimit(gym.make("PepperReachCam-v0", gui=False, dense=True),
-                  max_episode_steps=100), directory='./data/traces'))
+                  max_episode_steps=100))
 
 ac_kwargs = dict(hidden_sizes=[64, 64],
                  activation=nn.ReLU,
