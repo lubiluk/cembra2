@@ -315,16 +315,15 @@ class SAC:
                 ep_len += 1
             self.logger.store(test_ep_return=ep_ret, test_ep_length=ep_len)
             if "is_success" in i:
-                self.logger.store(success_rate=i["is_success"])
+                self.logger.store(test_success_rate=i["is_success"])
 
-    def train(
-        self,
-        steps_per_epoch,
-        epochs,
-        stop_return=None,
-        abort_after_epoch=None,
-        abort_return_threshold=0.1
-    ):
+    def train(self,
+              steps_per_epoch,
+              epochs,
+              stop_return=None,
+              stop_success_rate=None,
+              abort_after_epoch=None,
+              abort_return_threshold=0.1):
         # Prepare for interaction with environment
         total_steps = steps_per_epoch * epochs
         start_time = time.time()
@@ -387,11 +386,14 @@ class SAC:
                 self.test_agent()
 
                 test_ep_return = self.logger.get_stats("test_ep_return")[0]
+                test_success_rate = self.logger.get_stats(
+                    "test_success_rate")[0]
 
                 # Log info about epoch
                 self.logger.log_tabular("epoch", epoch)
-                if "success_rate" in self.logger.epoch_dict:
-                    self.logger.log_tabular("success_rate", average_only=True)
+                if "test_success_rate" in self.logger.epoch_dict:
+                    self.logger.log_tabular("test_success_rate",
+                                            average_only=True)
                 self.logger.log_tabular("ep_return", average_only=True)
                 self.logger.log_tabular("test_ep_return", average_only=True)
                 self.logger.log_tabular("ep_length", average_only=True)
@@ -405,6 +407,10 @@ class SAC:
                 self.logger.dump_tabular()
 
                 if stop_return is not None and test_ep_return >= stop_return:
+                    self.logger.log("\nStopping early\n")
+                    break
+
+                if stop_success_rate is not None and test_success_rate >= stop_success_rate:
                     self.logger.log("\nStopping early\n")
                     break
 
