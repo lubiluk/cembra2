@@ -5,30 +5,29 @@ import gym_pepper
 import torch
 import torch.nn as nn
 from algos import SAC
-from algos.sac import core_cam
-from algos.common import replay_buffer_cam
+from algos.sac import core
+from algos.common import replay_buffer
 import numpy
 from gym.wrappers.time_limit import TimeLimit
-from utils.wrappers import TorchifyWrapper
 import pickle
+import time
+from scoop import futures
+
+torch.backends.cudnn.benchmark = True
+torch.autograd.set_detect_anomaly(False)
+torch.autograd.profiler.profile(enabled=False)
 
 
 def rand_individual():
-    depth = random.randint(1, 10)
     return {
         "batch_size": 2**random.randint(1, 12),
         "gamma": random.random(),
         "polyak": random.random(),
-        "lr": random.uniform(0.0, 0.1),
-        "start_steps": random.randint(1, 100000),
+        "lr": 0.1**random.randint(1, 3),
+        "start_steps": 10**random.randint(1, 5),
         "num_updates": 2**random.randint(0, 12),
         "nn_width": 2**random.randint(0, 12),
-        "nn_depth": random.randint(1, 10),
-        "conv_depth": random.randint(1, 10),
-        "conv_channels": 2**random.randint(0, 8),
-        "conv_kernel": random.randint(1, 32),
-        "conv_stride": random.randint(1, 32),
-        "feature_dim": 2**random.randint(1, 12)
+        "nn_depth": random.randint(1, 10)
     }
 
 
@@ -45,37 +44,26 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 
 def eval(individual):
-    env = TorchifyWrapper(
-        TimeLimit(gym.make("PepperReachCam-v0", gui=False, dense=True),
-                  max_episode_steps=100))
-
-    n_channel = 1
-    conv_lrs = []
-
-    for _ in range(individual["conv_depth"]):
-        conv_lrs.append(
-            (n_channel, individual["conv_channels"], individual["conv_kernel"],
-             individual["conv_stride"], 0))
-        n_channel = individual["conv_channels"]
+    env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
+                    max_episode_steps=100)
 
     ac_kwargs = dict(hidden_sizes=[
         individual["nn_width"] for _ in range(individual["nn_depth"])
     ],
-                     activation=nn.ReLU,
-                     conv_sizes=conv_lrs,
-                     feature_dim=individual["feature_dim"])
-    rb_kwargs = dict(size=30000)
+                     activation=nn.ReLU)
+    rb_kwargs = dict(size=1000000)
 
-    logger_kwargs = dict(output_dir='data/hyper_train_0',
-                         exp_name='hyper_train_0')
+    sid = str(int(time.time()))
+    logger_kwargs = dict(output_dir='data/hyper_train_0_' + sid,
+                         exp_name='hyper_train_0_' + sid)
 
     ret = 0.0
 
     try:
         model = SAC(env=env,
-                    actor_critic=core_cam.MLPActorCritic,
+                    actor_critic=core.MLPActorCritic,
                     ac_kwargs=ac_kwargs,
-                    replay_buffer=replay_buffer_cam.ReplayBuffer,
+                    replay_buffer=replay_buffer.ReplayBuffer,
                     rb_kwargs=rb_kwargs,
                     max_ep_len=100,
                     batch_size=individual["batch_size"],
@@ -83,7 +71,7 @@ def eval(individual):
                     lr=individual["lr"],
                     polyak=individual["polyak"],
                     start_steps=individual["start_steps"],
-                    update_after=individual["batch_size"],
+                    update_after=1000,
                     update_every=1,
                     num_updates=individual["num_updates"],
                     logger_kwargs=logger_kwargs)
@@ -141,15 +129,15 @@ def main():
     stats.register("max", numpy.max, axis=0)
 
     logbook = algorithms.eaMuPlusLambda(pop,
-                              toolbox,
-                              MU,
-                              LAMBDA,
-                              CXPB,
-                              MUTPB,
-                              NGEN,
-                              stats,
-                              halloffame=hof,
-                              verbose=True)
+                                        toolbox,
+                                        MU,
+                                        LAMBDA,
+                                        CXPB,
+                                        MUTPB,
+                                        NGEN,
+                                        stats,
+                                        halloffame=hof,
+                                        verbose=True)
 
     with open("data/hyper_train_0_logbook.pickle", "wb") as output_file:
         pickle.dump(logbook, output_file)
