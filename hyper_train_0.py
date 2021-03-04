@@ -111,6 +111,7 @@ toolbox.register("evaluate", eval)
 toolbox.register("mate", cx)
 toolbox.register("mutate", mut)
 toolbox.register("select", tools.selNSGA2)
+toolbox.register("map", futures.map)
 
 
 def main():
