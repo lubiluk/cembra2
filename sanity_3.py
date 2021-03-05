@@ -23,13 +23,7 @@ model = SAC(
     learning_rate=0.001,
     learning_starts=1000,
     gamma=0.95,
-<<<<<<< HEAD
     ent_coef='auto',
-=======
-    ent_coef=0.001,
-    n_sampled_goal=4,
-    goal_selection_strategy='future',
->>>>>>> sanity
     policy_kwargs=policy_kwargs,
     train_freq=1,
 )
