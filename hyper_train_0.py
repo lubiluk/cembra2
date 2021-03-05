@@ -10,7 +10,7 @@ from algos.common import replay_buffer
 import numpy
 from gym.wrappers.time_limit import TimeLimit
 import pickle
-import time
+import uuid
 from scoop import futures
 
 torch.backends.cudnn.benchmark = True
@@ -53,7 +53,7 @@ def eval(individual):
                      activation=nn.ReLU)
     rb_kwargs = dict(size=1000000)
 
-    sid = str(int(time.time()))
+    sid = str(uuid.uuid4())
     logger_kwargs = dict(output_dir='data/hyper_train_0_' + sid,
                          exp_name='hyper_train_0_' + sid)
 
