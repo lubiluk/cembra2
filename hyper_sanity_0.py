@@ -72,7 +72,7 @@ def eval(individual):
 
     try:
         ret = model.train(steps_per_epoch=1000, epochs=10)
-    except:
+    except Exception:
         pass
 
     return ret,

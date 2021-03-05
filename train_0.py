@@ -11,10 +11,10 @@ torch.backends.cudnn.benchmark = True
 torch.autograd.set_detect_anomaly(False)
 torch.autograd.profiler.profile(enabled=False)
 
-env = TimeLimit(gym.make("PepperReach-v0", gui=True, dense=True),
+env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
                 max_episode_steps=100)
 
-ac_kwargs = dict(hidden_sizes=[64, 64, 64], activation=nn.ReLU)
+ac_kwargs = dict(hidden_sizes=[64, 64], activation=nn.ReLU)
 rb_kwargs = dict(size=1000000)
 
 logger_kwargs = dict(output_dir='data/0', exp_name='0')
@@ -28,11 +28,12 @@ model = SAC(env=env,
             batch_size=64,
             gamma=0.95,
             lr=0.001,
+            alpha=0.001,
             update_after=10,
             update_every=64,
             logger_kwargs=logger_kwargs)
 
-model.train(steps_per_epoch=10, epochs=100, stop_success_rate=0.9)
+model.train(steps_per_epoch=1000, epochs=1000, stop_success_rate=0.8)
 
 from algos.test_policy import load_policy_and_env, run_policy
 

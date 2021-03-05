@@ -80,10 +80,10 @@ def eval(individual):
 
         ret = model.train(steps_per_epoch=10000,
                           epochs=500,
-                          stop_return=0.8,
+                          stop_success_rate=0.8,
                           abort_after_epoch=50,
-                          abort_return_threshold=0.2)
-    except:
+                          abort_return_threshold=-0.5)
+    except Exception:
         pass
 
     return ret,
