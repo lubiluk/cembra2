@@ -21,8 +21,8 @@ torch.autograd.profiler.profile(enabled=False)
 def rand_individual():
     return {
         "batch_size": 2**random.randint(1, 12),
-        "gamma": random.random(),
-        "polyak": random.random(),
+        # "gamma": random.random(),
+        # "polyak": random.random(),
         "alpha": 0.1**random.randint(1, 3),
         "lr": 0.1**random.randint(1, 3),
         "start_steps": 10**random.randint(1, 5),
@@ -68,10 +68,10 @@ def eval(individual):
                     rb_kwargs=rb_kwargs,
                     max_ep_len=100,
                     batch_size=individual["batch_size"],
-                    gamma=individual["gamma"],
+                    # gamma=individual["gamma"],
+                    # polyak=individual["polyak"],
                     lr=individual["lr"],
                     alpha=individual["alpha"],
-                    polyak=individual["polyak"],
                     start_steps=individual["start_steps"],
                     update_after=1000,
                     update_every=1,

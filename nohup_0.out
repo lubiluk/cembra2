@@ -1,0 +1,220 @@
+[2021-03-05 17:05:32,509] launcher  INFO    SCOOP 0.7 1.1 on linux2 using Python 2.7.18 (default, Sep 30 2020, 00:00:00) [GCC 10.2.1 20200826 (Red Hat 10.2.1-3)], API: 1013
+[2021-03-05 17:05:32,509] launcher  INFO    Deploying 4 worker(s) over 1 host(s).
+[2021-03-05 17:05:32,509] launcher  INFO    Worker distribution: 
+[2021-03-05 17:05:32,509] launcher  INFO       127.0.0.1:	3 + origin
+/home/biomob/.local/lib/python2.7/site-packages/deap/creator.py:141: RuntimeWarning: A class named 'Fitness' has already been created and it will be overwritten. Consider deleting previous creation of that class or rename it.
+  RuntimeWarning)
+/home/biomob/.local/lib/python2.7/site-packages/deap/creator.py:141: RuntimeWarning: A class named 'Individual' has already been created and it will be overwritten. Consider deleting previous creation of that class or rename it.
+  RuntimeWarning)
+pybullet build time: Dec 23 2020 01:45:35
+pybullet build time: Dec 23 2020 01:45:35
+pybullet build time: Dec 23 2020 01:45:35
+pybullet build time: Dec 23 2020 01:45:35
+/home/biomob/.local/lib/python2.7/site-packages/gym/logger.py:30: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  warnings.warn(colorize('%s: %s'%('WARN', msg % args), 'yellow'))
+/home/biomob/.local/lib/python2.7/site-packages/gym/logger.py:30: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  warnings.warn(colorize('%s: %s'%('WARN', msg % args), 'yellow'))
+/home/biomob/.local/lib/python2.7/site-packages/gym/logger.py:30: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  warnings.warn(colorize('%s: %s'%('WARN', msg % args), 'yellow'))
+/home/biomob/.local/lib/python2.7/site-packages/gym/logger.py:30: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  warnings.warn(colorize('%s: %s'%('WARN', msg % args), 'yellow'))
+[32;1mLogging data to data/hyper_train_0_7ffd35dd-c861-410f-a9a6-1030feb2b325/progress.txt[0m
+[36;1mSaving config:
+[0m
+{
+    "ac_kwargs":	{
+        "activation":	"ReLU",
+        "hidden_sizes":	[
+            512,
+            512,
+            512
+        ]
+    },
+    "actor_critic":	"MLPActorCritic",
+    "alpha":	0.0010000000000000002,
+    "batch_size":	2,
+    "env":	"<TimeLimit<PepperReachEnv<PepperReach-v0>>>",
+    "exp_name":	"hyper_train_0_7ffd35dd-c861-410f-a9a6-1030feb2b325",
+    "gamma":	0.33925870715948436,
+    "logger_kwargs":	{
+        "exp_name":	"hyper_train_0_7ffd35dd-c861-410f-a9a6-1030feb2b325",
+        "output_dir":	"data/hyper_train_0_7ffd35dd-c861-410f-a9a6-1030feb2b325"
+    },
+    "lr":	0.1,
+    "max_ep_len":	100,
+    "num_test_episodes":	10,
+    "num_updates":	256,
+    "polyak":	0.041838310213602514,
+    "rb_kwargs":	{
+        "size":	1000000
+    },
+    "replay_buffer":	"ReplayBuffer",
+    "save_freq":	1,
+    "seed":	0,
+    "self":	"SAC",
+    "start_steps":	10,
+    "update_after":	1000,
+    "update_every":	1,
+    "use_gpu_buffer":	true,
+    "use_gpu_computation":	true
+}
+[32;1m
+Using GPU replay buffer
+[0m
+[32;1m
+Using GPU computaion
+[0m
+[32;1m
+Number of parameters: 	 pi: 545812, 	 q1: 541185, 	 q2: 541185
+[0m
+[32;1mLogging data to data/hyper_train_0_bddc49d7-ae13-4e31-8f2b-89cf6de3b9b1/progress.txt[0m
+[36;1mSaving config:
+[0m
+{
+    "ac_kwargs":	{
+        "activation":	"ReLU",
+        "hidden_sizes":	[
+            4,
+            4
+        ]
+    },
+    "actor_critic":	"MLPActorCritic",
+    "alpha":	0.010000000000000002,
+    "batch_size":	16,
+    "env":	"<TimeLimit<PepperReachEnv<PepperReach-v0>>>",
+    "exp_name":	"hyper_train_0_bddc49d7-ae13-4e31-8f2b-89cf6de3b9b1",
+    "gamma":	0.505108722925067,
+    "logger_kwargs":	{
+        "exp_name":	"hyper_train_0_bddc49d7-ae13-4e31-8f2b-89cf6de3b9b1",
+        "output_dir":	"data/hyper_train_0_bddc49d7-ae13-4e31-8f2b-89cf6de3b9b1"
+    },
+    "lr":	0.010000000000000002,
+    "max_ep_len":	100,
+    "num_test_episodes":	10,
+    "num_updates":	2048,
+    "polyak":	0.9226310706841612,
+    "rb_kwargs":	{
+        "size":	1000000
+    },
+    "replay_buffer":	"ReplayBuffer",
+    "save_freq":	1,
+    "seed":	0,
+    "self":	"SAC",
+    "start_steps":	100,
+    "update_after":	1000,
+    "update_every":	1,
+    "use_gpu_buffer":	true,
+    "use_gpu_computation":	true
+}
+[32;1m
+Using GPU replay buffer
+[0m
+[32;1m
+Using GPU computaion
+[0m
+[32;1m
+Number of parameters: 	 pi: 200, 	 q1: 145, 	 q2: 145
+[0m
+[32;1mLogging data to data/hyper_train_0_072680d8-ec21-4d77-8b3a-4c5f19cfecae/progress.txt[0m
+[36;1mSaving config:
+[0m
+{
+    "ac_kwargs":	{
+        "activation":	"ReLU",
+        "hidden_sizes":	[
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+        ]
+    },
+    "actor_critic":	"MLPActorCritic",
+    "alpha":	0.010000000000000002,
+    "batch_size":	256,
+    "env":	"<TimeLimit<PepperReachEnv<PepperReach-v0>>>",
+    "exp_name":	"hyper_train_0_072680d8-ec21-4d77-8b3a-4c5f19cfecae",
+    "gamma":	0.6206878369802248,
+    "logger_kwargs":	{
+        "exp_name":	"hyper_train_0_072680d8-ec21-4d77-8b3a-4c5f19cfecae",
+        "output_dir":	"data/hyper_train_0_072680d8-ec21-4d77-8b3a-4c5f19cfecae"
+    },
+    "lr":	0.010000000000000002,
+    "max_ep_len":	100,
+    "num_test_episodes":	10,
+    "num_updates":	1024,
+    "polyak":	0.45235449722183685,
+    "rb_kwargs":	{
+        "size":	1000000
+    },
+    "replay_buffer":	"ReplayBuffer",
+    "save_freq":	1,
+    "seed":	0,
+    "self":	"SAC",
+    "start_steps":	10000,
+    "update_after":	1000,
+    "update_every":	1,
+    "use_gpu_buffer":	true,
+    "use_gpu_computation":	true
+}
+[32;1m
+Using GPU replay buffer
+[0m
+[32;1m
+Using GPU computaion
+[0m
+[32;1m
+Number of parameters: 	 pi: 142, 	 q1: 105, 	 q2: 105
+[0m
+[32;1mLogging data to data/hyper_train_0_21a3ee56-298d-4170-a4f0-31d433016a4e/progress.txt[0m
+[36;1mSaving config:
+[0m
+{
+    "ac_kwargs":	{
+        "activation":	"ReLU",
+        "hidden_sizes":	[
+            16,
+            16,
+            16
+        ]
+    },
+    "actor_critic":	"MLPActorCritic",
+    "alpha":	0.0010000000000000002,
+    "batch_size":	32,
+    "env":	"<TimeLimit<PepperReachEnv<PepperReach-v0>>>",
+    "exp_name":	"hyper_train_0_21a3ee56-298d-4170-a4f0-31d433016a4e",
+    "gamma":	0.1206257527866258,
+    "logger_kwargs":	{
+        "exp_name":	"hyper_train_0_21a3ee56-298d-4170-a4f0-31d433016a4e",
+        "output_dir":	"data/hyper_train_0_21a3ee56-298d-4170-a4f0-31d433016a4e"
+    },
+    "lr":	0.0010000000000000002,
+    "max_ep_len":	100,
+    "num_test_episodes":	10,
+    "num_updates":	512,
+    "polyak":	0.6490344009609017,
+    "rb_kwargs":	{
+        "size":	1000000
+    },
+    "replay_buffer":	"ReplayBuffer",
+    "save_freq":	1,
+    "seed":	0,
+    "self":	"SAC",
+    "start_steps":	10000,
+    "update_after":	1000,
+    "update_every":	1,
+    "use_gpu_buffer":	true,
+    "use_gpu_computation":	true
+}
+[32;1m
+Using GPU replay buffer
+[0m
+[32;1m
+Using GPU computaion
+[0m
+[32;1m
+Number of parameters: 	 pi: 1204, 	 q1: 1041, 	 q2: 1041
+[0m
