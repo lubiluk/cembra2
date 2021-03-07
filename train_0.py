@@ -25,12 +25,12 @@ model = SAC(env=env,
             replay_buffer=replay_buffer.ReplayBuffer,
             rb_kwargs=rb_kwargs,
             max_ep_len=100,
-            batch_size=64,
+            batch_size=256,
             gamma=0.95,
             lr=0.001,
-            alpha=0.001,
+            alpha=0.0003,
             update_after=10,
-            update_every=64,
+            update_every=1,
             logger_kwargs=logger_kwargs)
 
 model.train(steps_per_epoch=1000, epochs=1000, stop_success_rate=0.8)
