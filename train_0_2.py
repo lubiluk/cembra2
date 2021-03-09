@@ -17,7 +17,7 @@ env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
 ac_kwargs = dict(hidden_sizes=[128, 128], activation=nn.ReLU)
 rb_kwargs = dict(size=1000000)
 
-logger_kwargs = dict(output_dir='data/0', exp_name='0')
+logger_kwargs = dict(output_dir='data/0_2', exp_name='0_2')
 
 model = SAC(env=env,
             actor_critic=core.MLPActorCritic,
@@ -37,6 +37,6 @@ model.train(steps_per_epoch=1000, epochs=1000)
 
 from algos.test_policy import load_policy_and_env, run_policy
 
-_, get_action = load_policy_and_env('data/0')
+_, get_action = load_policy_and_env('data/0_2')
 
 run_policy(env, get_action)
