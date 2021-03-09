@@ -5,7 +5,7 @@ import cv2
 import h5py
 from algos.common.utils import combined_shape
 
-N = 100000
+N = 1000
 
 env = gym.make("PepperReachCam-v0", gui=True)
 obs = env.reset()
@@ -16,7 +16,7 @@ lin_dim = env.observation_space.spaces["joints_state"].shape
 with h5py.File("/scratch/collect_0.hdf5", "w") as f:
     img_dset = f.create_dataset("camera",
                                 combined_shape(N, img_dim),
-                                dtype='f')
+                                dtype='uint8')
     lin_dset = f.create_dataset("joints_state",
                                 combined_shape(N, lin_dim),
                                 dtype='f')

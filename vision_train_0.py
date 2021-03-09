@@ -6,6 +6,20 @@ import numpy as np
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
+import h5py
+import cv2
+import time
+
+def imshow(img):
+    cv2.imshow("camera", img)
+    cv2.waitKey(1)
+
+
+with h5py.File("/scratch/collect_0.hdf5", "r") as f:
+    while True:
+        imshow(f["camera"][0])
+
+exit(0)
 
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -33,12 +47,6 @@ testloader = torch.utils.data.DataLoader(testset,
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse',
            'ship', 'truck')
 
-
-def imshow(img):
-    img = img / 2 + 0.5  # unnormalize
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
 
 
 # get some random training images
