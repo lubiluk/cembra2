@@ -23,12 +23,12 @@ def rand_individual():
         "batch_size": 2**random.randint(1, 12),
         # "gamma": random.random(),
         # "polyak": random.random(),
-        "alpha": 0.1**random.randint(1, 3),
+        "alpha": 0.0001 * random.randint(1, 9),
         "lr": 0.1**random.randint(1, 3),
         "start_steps": 10**random.randint(1, 5),
         "num_updates": 2**random.randint(0, 12),
-        "nn_width": 2**random.randint(0, 12),
-        "nn_depth": random.randint(1, 10)
+        "nn_width": 2**random.randint(0, 8),
+        "nn_depth": random.randint(1, 4)
     }
 
 
@@ -61,22 +61,23 @@ def eval(individual):
     ret = 0.0
 
     try:
-        model = SAC(env=env,
-                    actor_critic=core.MLPActorCritic,
-                    ac_kwargs=ac_kwargs,
-                    replay_buffer=replay_buffer.ReplayBuffer,
-                    rb_kwargs=rb_kwargs,
-                    max_ep_len=100,
-                    batch_size=individual["batch_size"],
-                    # gamma=individual["gamma"],
-                    # polyak=individual["polyak"],
-                    lr=individual["lr"],
-                    alpha=individual["alpha"],
-                    start_steps=individual["start_steps"],
-                    update_after=1000,
-                    update_every=1,
-                    num_updates=individual["num_updates"],
-                    logger_kwargs=logger_kwargs)
+        model = SAC(
+            env=env,
+            actor_critic=core.MLPActorCritic,
+            ac_kwargs=ac_kwargs,
+            replay_buffer=replay_buffer.ReplayBuffer,
+            rb_kwargs=rb_kwargs,
+            max_ep_len=100,
+            batch_size=individual["batch_size"],
+            # gamma=individual["gamma"],
+            # polyak=individual["polyak"],
+            lr=individual["lr"],
+            alpha=individual["alpha"],
+            start_steps=individual["start_steps"],
+            update_after=1000,
+            update_every=1,
+            num_updates=individual["num_updates"],
+            logger_kwargs=logger_kwargs)
 
         ret = model.train(steps_per_epoch=10000,
                           epochs=500,
