@@ -26,7 +26,7 @@ def rand_individual():
         "alpha": 0.0001 * random.randint(1, 9),
         "lr": 0.1**random.randint(1, 3),
         "start_steps": 10**random.randint(1, 5),
-        "num_updates": 2**random.randint(0, 12),
+        "num_updates": 2**random.randint(0, 6),
         "nn_width": 2**random.randint(0, 8),
         "nn_depth": random.randint(1, 4)
     }
