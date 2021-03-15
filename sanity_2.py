@@ -25,6 +25,7 @@ model = SAC(env=env,
     batch_size=256,
     gamma=0.95,
     lr=0.001,
+    alpha=0.0002,
     update_after=1000,
     update_every=1,
     logger_kwargs=logger_kwargs)
