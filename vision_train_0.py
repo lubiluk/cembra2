@@ -8,71 +8,93 @@ import torch.nn as nn
 import torch.nn.functional as F
 import h5py
 import cv2
-import time
+from torch.utils.data import Dataset, DataLoader
+
 
 def imshow(img):
-    cv2.imshow("camera", img)
+    img = img / 2 + 0.5
+    cv2.imshow("camera", img.numpy().transpose((1, 2, 0)))
     cv2.waitKey(1)
 
 
-with h5py.File("/scratch/collect_0.hdf5", "r") as f:
-    while True:
-        imshow(f["camera"][0])
+class PepperDataset(Dataset):
+    def __init__(self, hdf_file, transform=None):
+        self.data = h5py.File(hdf_file, "r")
+        self.transform = transform
 
-exit(0)
+    def __len__(self):
+        return len(self.data["camera"])
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        image = self.data["camera"][idx]
+        position = self.data["object_position"][idx]
+
+        if self.transform:
+            image = self.transform(image)
+
+        sample = (image, position)
+
+        return sample
+
+
+class Transpose(object):
+    def __call__(self, sample):
+        image, position = sample
+
+        # swap color axis because
+        # numpy image: H x W x C
+        # torch image: C X H X W
+        image = image.transpose((2, 0, 1))
+        return (image, position)
+
 
 transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Grayscale(),
     transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    transforms.Normalize((0.5, ), (0.5, ))
 ])
 
-trainset = torchvision.datasets.CIFAR10(root='./data',
-                                        train=True,
-                                        download=True,
-                                        transform=transform)
+trainset = PepperDataset("data/collect_0_100k.hdf5", transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=4,
                                           shuffle=True,
                                           num_workers=0)
 
-testset = torchvision.datasets.CIFAR10(root='./data',
-                                       train=False,
-                                       download=True,
-                                       transform=transform)
+testset = PepperDataset("data/collect_0_10k.hdf5", transform=transform)
 testloader = torch.utils.data.DataLoader(testset,
                                          batch_size=4,
                                          shuffle=False,
                                          num_workers=0)
 
-classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse',
-           'ship', 'truck')
-
-
-
 # get some random training images
 dataiter = iter(trainloader)
 images, labels = dataiter.next()
 
+print(len(trainset))
 # show images
-imshow(torchvision.utils.make_grid(images))
+imshow(images[0])
 # print labels
-print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
+print(" ".join("%f" % labels[0][j] for j in range(3)))
 
 
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv1 = nn.Conv2d(1, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc1 = nn.Linear(16 * 27 * 37, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.fc3 = nn.Linear(84, 3)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
+        x = x.view(-1, 16 * 27 * 37)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
@@ -86,7 +108,7 @@ print(device)
 net = Net()
 net.to(device)
 
-criterion = nn.CrossEntropyLoss()
+criterion = nn.MSELoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
 for epoch in range(2):  # loop over the dataset multiple times
@@ -108,57 +130,38 @@ for epoch in range(2):  # loop over the dataset multiple times
         # print statistics
         running_loss += loss.item()
         if i % 2000 == 1999:  # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
+            print("[%d, %5d] loss: %.3f" %
                   (epoch + 1, i + 1, running_loss / 2000))
             running_loss = 0.0
 
-print('Finished Training')
+print("Finished Training")
 
-PATH = './data/cifar_net.pth'
+PATH = "./data/cifar_net.pth"
 torch.save(net.state_dict(), PATH)
 
 dataiter = iter(testloader)
 images, labels = dataiter.next()
 
 # print images
-imshow(torchvision.utils.make_grid(images))
-print('GroundTruth: ', ' '.join('%5s' % classes[labels[j]] for j in range(4)))
+imshow(images[0])
+print("GroundTruth: ", " ".join("%f" % labels[0][j] for j in range(3)))
 
 net = Net()
 net.load_state_dict(torch.load(PATH))
 
-outputs = net(images)
+predicted = net(images)
 
-_, predicted = torch.max(outputs, 1)
-
-print('Predicted: ', ' '.join('%5s' % classes[predicted[j]] for j in range(4)))
+print("Predicted: ", " ".join("%f" % predicted[0][j] for j in range(3)))
 
 correct = 0
 total = 0
 with torch.no_grad():
     for data in testloader:
         images, labels = data
-        outputs = net(images)
-        _, predicted = torch.max(outputs.data, 1)
+        predicted = net(images)
         total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+        correct += (np.linalg.norm(predicted - labels, axis=-1) <
+                    0.1).sum().item()
 
-print('Accuracy of the network on the 10000 test images: %d %%' %
+print("Accuracy of the network on the 10000 test images: %d %%" %
       (100 * correct / total))
-
-class_correct = list(0. for i in range(10))
-class_total = list(0. for i in range(10))
-with torch.no_grad():
-    for data in testloader:
-        images, labels = data
-        outputs = net(images)
-        _, predicted = torch.max(outputs, 1)
-        c = (predicted == labels).squeeze()
-        for i in range(4):
-            label = labels[i]
-            class_correct[label] += c[i].item()
-            class_total[label] += 1
-
-for i in range(10):
-    print('Accuracy of %5s : %2d %%' %
-          (classes[i], 100 * class_correct[i] / class_total[i]))
