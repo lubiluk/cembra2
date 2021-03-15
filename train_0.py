@@ -14,7 +14,7 @@ torch.autograd.profiler.profile(enabled=False)
 env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
                 max_episode_steps=100)
 
-ac_kwargs = dict(hidden_sizes=[64, 64], activation=nn.ReLU)
+ac_kwargs = dict(hidden_sizes=[64, 64, 64], activation=nn.ReLU)
 rb_kwargs = dict(size=1000000)
 
 logger_kwargs = dict(output_dir='data/0', exp_name='0')
@@ -28,7 +28,7 @@ model = SAC(env=env,
             batch_size=256,
             gamma=0.95,
             lr=0.001,
-            alpha=0.0003,
+            alpha=0.0002,
             update_after=10,
             update_every=1,
             logger_kwargs=logger_kwargs)
