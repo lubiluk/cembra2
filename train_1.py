@@ -7,17 +7,16 @@ from algos.sac import core_her
 from algos.common import replay_buffer_her
 from gym.wrappers.time_limit import TimeLimit
 
-
 torch.backends.cudnn.benchmark = True
 torch.autograd.set_detect_anomaly(False)
 torch.autograd.profiler.profile(enabled=False)
 
-env = TimeLimit(gym.make("PepperPush-v0", gui=False),
-                     max_episode_steps=100)
-
+env = TimeLimit(gym.make("PepperPush-v0", gui=False), max_episode_steps=100)
 
 ac_kwargs = dict(hidden_sizes=[64, 64, 64], activation=nn.ReLU)
-rb_kwargs = dict(size=1000000)
+rb_kwargs = dict(size=1000000,
+                 n_sampled_goal=4,
+                 goal_selection_strategy='future')
 
 logger_kwargs = dict(output_dir='data/1', exp_name='1')
 
