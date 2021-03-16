@@ -28,7 +28,7 @@ model = SAC(
     train_freq=1,
 )
 
-model.learn(10000000)
+model.learn(500000)
 
 model.save("./data/sanity_3")
 
