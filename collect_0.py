@@ -5,7 +5,7 @@ import cv2
 import h5py
 from algos.common.utils import combined_shape
 
-N = 1000
+N = 100000
 
 env = gym.make("PepperReachCam-v0", gui=True)
 obs = env.reset()

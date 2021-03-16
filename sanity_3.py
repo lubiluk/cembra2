@@ -11,7 +11,7 @@ env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
 
 policy_kwargs = dict(
     activation_fn=th.nn.ReLU,
-    net_arch=[64, 64],
+    net_arch=[64, 64, 64],
 )
 
 model = SAC(
@@ -28,7 +28,7 @@ model = SAC(
     train_freq=1,
 )
 
-model.learn(1000000)
+model.learn(10000000)
 
 model.save("./data/sanity_3")
 
