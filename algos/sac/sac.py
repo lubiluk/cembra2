@@ -139,10 +139,17 @@ class SAC:
 
         """
         self.logger = EpochLogger(**logger_kwargs)
+
+        best_logger_kwargs = logger_kwargs.copy()
+        best_logger_kwargs["output_dir"] += '/best'
+        self.best_logger = EpochLogger(**best_logger_kwargs)
+        
         config = locals()
         config["env"] = str(config["env"])
         config["self"] = "SAC"
         self.logger.save_config(config)
+        self.best_logger.save_config(config)
+        
 
         buff_device = torch.device("cpu")
         comp_device = torch.device("cpu")
@@ -216,6 +223,7 @@ class SAC:
 
         # Set up model saving
         self.logger.setup_pytorch_saver(self.ac)
+        self.best_logger.setup_pytorch_saver(self.ac)
 
     # Set up function for computing SAC Q-losses
     def compute_loss_q(self, data):
@@ -330,6 +338,7 @@ class SAC:
         o, ep_ret, ep_len = self.env.reset(), 0, 0
         self.rb.start_episode()
         test_ep_return = None
+        best_test_ep_return = float("-inf")
 
         # Main loop: collect experience in env and update/log each epoch
         for t in range(total_steps):
@@ -417,5 +426,9 @@ class SAC:
                 if abort_after_epoch is not None and epoch >= abort_after_epoch and test_ep_return < abort_return_threshold:
                     self.logger.log("\nAborting ineffectivse training\n")
                     break
+
+                if test_ep_return > best_test_ep_return:
+                    self.logger.log("\Saving best model\n")
+                    self.best_logger.save_state({"env": self.env}, None)
 
         return test_ep_return
