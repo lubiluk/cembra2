@@ -10,6 +10,10 @@
     "actor_critic":	"MLPActorCritic",
     "alpha":	0.0002,
     "batch_size":	256,
+    "best_logger_kwargs":	{
+        "exp_name":	"0",
+        "output_dir":	"data/0/best"
+    },
     "env":	"<TimeLimit<PepperReachEnv<PepperReach-v0>>>",
     "exp_name":	"0",
     "gamma":	0.95,

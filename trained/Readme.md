@@ -21,7 +21,7 @@ env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
 
 model.train(steps_per_epoch=1000, epochs=1000)
 ```
-Success rate was up to 0.8 during training but then degraded to 
+Success rate up to 1.0
 
 ### 0/
 train_1.py
