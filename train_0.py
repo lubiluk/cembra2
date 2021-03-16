@@ -11,7 +11,7 @@ torch.backends.cudnn.benchmark = True
 torch.autograd.set_detect_anomaly(False)
 torch.autograd.profiler.profile(enabled=False)
 
-env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
+env = TimeLimit(gym.make("PepperReach-v0", gui=True, dense=True),
                 max_episode_steps=100)
 
 ac_kwargs = dict(hidden_sizes=[64, 64, 64], activation=nn.ReLU)
