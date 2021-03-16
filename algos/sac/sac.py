@@ -427,7 +427,7 @@ class SAC:
                     self.logger.log("\nAborting ineffectivse training\n")
                     break
 
-                if test_ep_return > best_test_ep_return:
+                if test_ep_return >= best_test_ep_return:
                     best_test_ep_return = test_ep_return
                     self.logger.log("\nSaving best model\n")
                     self.best_logger.save_state({"env": self.env}, None)
