@@ -3,6 +3,7 @@ import gym
 from gym.wrappers import TimeLimit
 import numpy as np
 import torch
+import torchvision.transforms as transforms
 
 class DoneOnSuccessWrapper(gym.Wrapper):
     """
@@ -79,7 +80,7 @@ class TimeFeatureWrapper(gym.Wrapper):
         
 
 class TorchifyWrapper(gym.ObservationWrapper):
-    def __init__(self, env, use_gpu=True):
+    def __init__(self, env):
         super(TorchifyWrapper, self).__init__(env)
 
         self.img_size = (1, 120, 160)
@@ -96,27 +97,21 @@ class TorchifyWrapper(gym.ObservationWrapper):
 
         self.observation_space = gym.spaces.Dict(obs_spaces)
 
-        self.device = torch.device("cpu")
-
-        if torch.cuda.is_available():
-            if use_gpu:
-                self.device = torch.device("cuda")
-                print('\nUsing GPU preprocessing\n')
+        self.transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Grayscale(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, ), (0.5, ))
+        ])
+        
 
 
     def observation(self, obs):
         """what happens to each observation"""
 
         # Convert image to grayscale
-        img = obs["camera_bottom"]
-        img = torch.as_tensor(img, dtype=torch.float32, device=self.device)
-        img = torch.mean(img, dim=-1)
-        # img = np.expand_dims(np.array(img, dtype=np.float32), axis=-1)
-        # Normalize
-        img = img / 255
-        # Add channel dimension
-        img = img.unsqueeze(0)
+        img = obs["camera"]
 
-        obs["camera_bottom"] = img
+        obs["camera"] = self.transform(img)
 
         return obs
