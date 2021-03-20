@@ -44,3 +44,8 @@ def cnn(sizes, activation, output_size, cam_space):
     lin = nn.Sequential(nn.Linear(bottom_n_flatten, output_size), nn.ReLU())
 
     return (conv, lin)
+
+def output_n(conv, cam_space):
+    with torch.no_grad():
+        obs = torch.as_tensor(cam_space.sample()[None]).float()
+        return conv(obs).shape[1]

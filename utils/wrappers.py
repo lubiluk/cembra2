@@ -86,12 +86,13 @@ class TorchifyWrapper(gym.ObservationWrapper):
         self.img_size = (1, 120, 160)
 
         obs_spaces = dict(
-            camera_bottom=gym.spaces.Box(
+            camera=gym.spaces.Box(
                 0.0,
                 1.0,
                 shape=self.img_size,
                 dtype=np.float32,
             ),
+            camera_pose=self.observation_space.spaces["camera_pose"],
             joints_state=self.observation_space.spaces["joints_state"],
         )
 
