@@ -59,11 +59,11 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
     fname = osp.join(fpath, 'pyt_save', 'model'+itr+'.pt')
     print('\n\nLoading from %s.\n\n'%fname)
 
-    # model = torch.load(fname, map_location=torch.device('cpu'))
-    # model.pi.device = torch.device('cpu')
-    # model.q1.device = torch.device('cpu')
-    # model.q2.device = torch.device('cpu')
-    model = torch.load(fname)
+    model = torch.load(fname, map_location=torch.device('cpu'))
+    model.pi.device = torch.device('cpu')
+    model.q1.device = torch.device('cpu')
+    model.q2.device = torch.device('cpu')
+    # model = torch.load(fname)
     model.eval()
 
     # make function for producing an action given a single state

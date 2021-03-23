@@ -1,9 +1,11 @@
 # Copied from https://github.com/araffin/rl-baselines-zoo
 import gym
+from gym import spaces
 from gym.wrappers import TimeLimit
 import numpy as np
 import torch
 import torchvision.transforms as transforms
+
 
 class DoneOnSuccessWrapper(gym.Wrapper):
     """
@@ -77,7 +79,7 @@ class TimeFeatureWrapper(gym.Wrapper):
             time_feature = 1.0
         # Optionnaly: concatenate [time_feature, time_feature ** 2]
         return np.concatenate((obs, [time_feature]))
-        
+
 
 class TorchifyWrapper(gym.ObservationWrapper):
     def __init__(self, env):
@@ -104,8 +106,6 @@ class TorchifyWrapper(gym.ObservationWrapper):
             transforms.ToTensor(),
             transforms.Normalize((0.5, ), (0.5, ))
         ])
-        
-
 
     def observation(self, obs):
         """what happens to each observation"""
@@ -116,3 +116,60 @@ class TorchifyWrapper(gym.ObservationWrapper):
         obs["camera"] = self.transform(img)
 
         return obs
+
+
+import torch.nn as nn
+import torch.nn.functional as F
+
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(1, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(16 * 27 * 37, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 3)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 16 * 27 * 37)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+
+class VisionWrapper(gym.ObservationWrapper):
+    def __init__(self, env, model_file):
+        super(VisionWrapper, self).__init__(env)
+
+        self.net = Net()
+        self.net.load_state_dict(torch.load(model_file))
+        self.net.eval()
+
+        with torch.no_grad():
+            cam_space = env.observation_space.spaces["camera"]
+            obs = torch.as_tensor(cam_space.sample()[None]).float()
+            cam_dim = self.net(obs).shape[1]
+
+        cam_pose_dim = self.observation_space.spaces["camera_pose"].shape[0]
+        joints_state_dim = self.observation_space.spaces["joints_state"].shape[0]
+
+        self.observation_space = spaces.Box(-np.inf,
+                                            np.inf,
+                                            shape=(cam_dim + cam_pose_dim +
+                                                   joints_state_dim, 1),
+                                            dtype="float32")
+
+    def observation(self, obs):
+        """what happens to each observation"""
+
+        # Convert image to grayscale
+        img = obs["camera"]
+        img_feat = self.net(img.unsqueeze(dim=0)).squeeze(dim=0)
+        cam_pose = torch.as_tensor(obs["camera_pose"])
+        joints_state = torch.as_tensor(obs["joints_state"])
+
+        return torch.cat((joints_state, cam_pose, img_feat))

@@ -10,6 +10,7 @@ import h5py
 import cv2
 from torch.utils.data import Dataset, DataLoader
 
+PATH = "./data/vision_0.pth"
 
 def imshow(img):
     img = img / 2 + 0.5
@@ -58,13 +59,13 @@ transform = transforms.Compose([
     transforms.Normalize((0.5, ), (0.5, ))
 ])
 
-trainset = PepperDataset("/scratch/collect_0_100k.hdf5", transform=transform)
+trainset = PepperDataset("./data/collect_0_100k.hdf5", transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=4,
                                           shuffle=True,
                                           num_workers=0)
 
-testset = PepperDataset("/scratch/collect_0_10k.hdf5", transform=transform)
+testset = PepperDataset("./data/collect_0_10k.hdf5", transform=transform)
 testloader = torch.utils.data.DataLoader(testset,
                                          batch_size=4,
                                          shuffle=False,
@@ -111,7 +112,7 @@ net.to(device)
 criterion = nn.MSELoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-for epoch in range(2):  # loop over the dataset multiple times
+for epoch in range(4):  # loop over the dataset multiple times
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
@@ -136,8 +137,7 @@ for epoch in range(2):  # loop over the dataset multiple times
 
 print("Finished Training")
 
-PATH = "./data/cifar_net.pth"
-torch.save(net.state_dict(), PATH)
+torch.save(net, PATH)
 
 dataiter = iter(testloader)
 images, labels = dataiter.next()
@@ -146,8 +146,7 @@ images, labels = dataiter.next()
 imshow(images[0])
 print("GroundTruth: ", " ".join("%f" % labels[0][j] for j in range(3)))
 
-net = Net()
-net.load_state_dict(torch.load(PATH))
+net = torch.load(PATH)
 
 predicted = net(images)
 

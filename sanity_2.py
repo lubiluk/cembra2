@@ -30,7 +30,7 @@ model = SAC(env=env,
     update_every=1,
     logger_kwargs=logger_kwargs)
 
-model.train(steps_per_epoch=10000, epochs=20)
+model.train(steps_per_epoch=10000, epochs=200)
 
 from algos.test_policy import load_policy_and_env, run_policy
 
