@@ -5,7 +5,7 @@ from gym.wrappers.time_limit import TimeLimit
 from algos.test_policy import load_policy_and_env, run_policy
 
 env = TimeLimit(VisionWrapper(
-    TorchifyWrapper(gym.make("PepperReachCam-v0", gui=False, dense=True)),
+    TorchifyWrapper(gym.make("PepperReachCam-v0", gui=True, dense=True)),
     "trained/vision_0.pth"),
                 max_episode_steps=100)
 
