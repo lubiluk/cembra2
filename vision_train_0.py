@@ -9,8 +9,8 @@ import torch.nn.functional as F
 import h5py
 import cv2
 from torch.utils.data import Dataset, DataLoader
+from cnn.cnn_0 import Net
 
-PATH = "./data/vision_0.pth"
 
 def imshow(img):
     img = img / 2 + 0.5
@@ -82,26 +82,6 @@ imshow(images[0])
 print(" ".join("%f" % labels[0][j] for j in range(3)))
 
 
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 27 * 37, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 3)
-
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 27 * 37)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 print(device)
@@ -112,7 +92,7 @@ net.to(device)
 criterion = nn.MSELoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-for epoch in range(4):  # loop over the dataset multiple times
+for epoch in range(3):  # loop over the dataset multiple times
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
@@ -137,7 +117,8 @@ for epoch in range(4):  # loop over the dataset multiple times
 
 print("Finished Training")
 
-torch.save(net, PATH)
+PATH = "./data/cifar_net.pth"
+torch.save(net.state_dict(), PATH)
 
 dataiter = iter(testloader)
 images, labels = dataiter.next()
@@ -146,7 +127,8 @@ images, labels = dataiter.next()
 imshow(images[0])
 print("GroundTruth: ", " ".join("%f" % labels[0][j] for j in range(3)))
 
-net = torch.load(PATH)
+net = Net()
+net.load_state_dict(torch.load(PATH))
 
 predicted = net(images)
 

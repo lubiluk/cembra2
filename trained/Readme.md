@@ -28,6 +28,7 @@ Success rate 0.1
 
 ### vision_0.pth
 vision_train_0.py
-CNN extractor
+CNN extractor from cnn_0
+saved weights only
 returns x, y, z of the object or 0,0,0 if none
 79% Accuracy
