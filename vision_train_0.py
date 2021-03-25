@@ -59,13 +59,13 @@ transform = transforms.Compose([
     transforms.Normalize((0.5, ), (0.5, ))
 ])
 
-trainset = PepperDataset("./data/collect_0_100k.hdf5", transform=transform)
+trainset = PepperDataset("/scratch/collect_0_100k.hdf5", transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=4,
                                           shuffle=True,
                                           num_workers=0)
 
-testset = PepperDataset("./data/collect_0_10k.hdf5", transform=transform)
+testset = PepperDataset("/scratch/collect_0_10k.hdf5", transform=transform)
 testloader = torch.utils.data.DataLoader(testset,
                                          batch_size=4,
                                          shuffle=False,

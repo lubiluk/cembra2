@@ -25,3 +25,9 @@ alpha=0.0002
 model.train(steps_per_epoch=1000, epochs=1000)
 ```
 Success rate 0.1
+
+### vision_0.pth
+vision_train_0.py
+CNN extractor
+returns x, y, z of the object or 0,0,0 if none
+79% Accuracy
