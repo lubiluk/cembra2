@@ -123,7 +123,7 @@ class VisionWrapper(gym.ObservationWrapper):
         super(VisionWrapper, self).__init__(env)
 
         self.net = net_class()
-        self.net.load_state_dict(torch.load(model_file))
+        self.net.load_state_dict(torch.load(model_file, map_location=torch.device('cpu')))
         self.net.eval()
 
         with torch.no_grad():
@@ -148,5 +148,7 @@ class VisionWrapper(gym.ObservationWrapper):
         img_feat = self.net(img.unsqueeze(dim=0)).squeeze(dim=0)
         cam_pose = torch.as_tensor(obs["camera_pose"])
         joints_state = torch.as_tensor(obs["joints_state"])
+
+        print(img_feat)
 
         return torch.cat((joints_state, cam_pose, img_feat))
