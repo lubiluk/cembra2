@@ -52,7 +52,7 @@ model = SAC(env=env,
             lr=0.001,
             alpha=0.0002,
             update_after=1,
-            update_every=1,
+            update_every=1024,
             logger_kwargs=logger_kwargs)
 
 model.train(steps_per_epoch=1000, epochs=5000)
