@@ -5,13 +5,16 @@ import cv2
 import h5py
 from algos.common.utils import combined_shape
 
-N = 100000
+N = 20000
 
 env = gym.make("PepperReachCam-v0", gui=True)
 obs = env.reset()
 
 img_dim = env.observation_space.spaces["camera"].shape
 lin_dim = env.observation_space.spaces["joints_state"].shape
+
+lower_range = np.array([110, 50, 50])
+upper_range = np.array([130, 255, 255])
 
 with h5py.File("/scratch/collect_0.hdf5", "w") as f:
     img_dset = f.create_dataset("camera",
@@ -25,7 +28,23 @@ with h5py.File("/scratch/collect_0.hdf5", "w") as f:
     for j in range(N):
         action = np.random.sample(10) * 2 - 1
         o, r, d, i = env.step(action)
-        cv2.imshow("synthetic bottom camera", o["camera"])
+
+        img = o["camera"]
+        lin = o["joints_state"]
+        pos = i["object_position"]
+
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, lower_range, upper_range)
+
+        cv2.imshow("camera", img)
+        cv2.imshow('mask', mask)
+
+        if mask.max() == 0:
+            pos = np.array([0, 0, 0], dtype=np.float32)
+
+        cv2.imwrite(
+            "/scratch/collect_0/{}_{}_{}_{}.png".format(
+                j, pos[0], pos[1], pos[2]), o["camera"])
         cv2.waitKey(1)
 
         img_dset[j] = o["camera"]
@@ -36,4 +55,3 @@ with h5py.File("/scratch/collect_0.hdf5", "w") as f:
             env.reset()
 
     env.close()
-

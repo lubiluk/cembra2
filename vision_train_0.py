@@ -59,13 +59,13 @@ transform = transforms.Compose([
     transforms.Normalize((0.5, ), (0.5, ))
 ])
 
-trainset = PepperDataset("/scratch/collect_0_100k.hdf5", transform=transform)
+trainset = PepperDataset("/scratch/collect_0_train.hdf5", transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=4,
                                           shuffle=True,
                                           num_workers=0)
 
-testset = PepperDataset("/scratch/collect_0_10k.hdf5", transform=transform)
+testset = PepperDataset("/scratch/collect_0_test.hdf5", transform=transform)
 testloader = torch.utils.data.DataLoader(testset,
                                          batch_size=4,
                                          shuffle=False,
@@ -92,7 +92,7 @@ net.to(device)
 criterion = nn.MSELoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-for epoch in range(3):  # loop over the dataset multiple times
+for epoch in range(10):  # loop over the dataset multiple times
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
@@ -144,5 +144,5 @@ with torch.no_grad():
         correct += (np.linalg.norm(predicted - labels, axis=-1) <
                     0.1).sum().item()
 
-print("Accuracy of the network on the 10000 test images: %d %%" %
+print("Accuracy of the network on the test images: %d %%" %
       (100 * correct / total))
