@@ -16,7 +16,7 @@ ac_kwargs = dict(hidden_sizes=[128, 128],
                  activation=nn.ReLU,
                  conv_sizes=[[3, 32, 8, 4, 0], [32, 64, 4, 2, 0]])
 
-logger_kwargs = dict(output_dir='data/3', exp_name='3')
+logger_kwargs = dict(output_dir='data/push_cam', exp_name='3')
 
 td3_her_cam(env_fn=env_fn,
             actor_critic=core.MLPActorCritic,

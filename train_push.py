@@ -18,7 +18,7 @@ rb_kwargs = dict(size=1000000,
                  n_sampled_goal=4,
                  goal_selection_strategy='future')
 
-logger_kwargs = dict(output_dir='data/1', exp_name='1')
+logger_kwargs = dict(output_dir='data/push', exp_name='push')
 
 model = SAC(env=env,
             actor_critic=core_her.MLPActorCritic,
@@ -38,6 +38,6 @@ model.train(steps_per_epoch=1000, epochs=3000)
 
 from algos.test_policy import load_policy_and_env, run_policy
 
-_, get_action = load_policy_and_env('data/reach_cam')
+_, get_action = load_policy_and_env('data/push')
 
 run_policy(env, get_action)

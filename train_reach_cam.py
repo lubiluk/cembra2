@@ -39,7 +39,7 @@ ac_kwargs = dict(hidden_sizes=[64, 64, 64],
                  extractor_module=Extractor)
 rb_kwargs = dict(size=50000)
 
-logger_kwargs = dict(output_dir='data/2', exp_name='2')
+logger_kwargs = dict(output_dir='data/reach_cam', exp_name='reach_cam')
 
 model = SAC(env=env,
             actor_critic=core_cam.MLPActorCritic,
@@ -59,6 +59,6 @@ model.train(steps_per_epoch=1000, epochs=5000)
 
 from algos.test_policy import load_policy_and_env, run_policy
 
-_, get_action = load_policy_and_env('data/2')
+_, get_action = load_policy_and_env('data/reach_cam')
 
 run_policy(env, get_action)
