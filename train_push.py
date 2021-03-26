@@ -38,6 +38,6 @@ model.train(steps_per_epoch=1000, epochs=3000)
 
 from algos.test_policy import load_policy_and_env, run_policy
 
-_, get_action = load_policy_and_env('data/1')
+_, get_action = load_policy_and_env('data/reach_cam')
 
 run_policy(env, get_action)
