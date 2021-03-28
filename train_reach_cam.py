@@ -37,7 +37,7 @@ env = TorchifyWrapper(
 ac_kwargs = dict(hidden_sizes=[64, 64, 64],
                  activation=nn.ReLU,
                  extractor_module=Extractor)
-rb_kwargs = dict(size=50000)
+rb_kwargs = dict(size=1000000)
 
 logger_kwargs = dict(output_dir='data/reach_cam', exp_name='reach_cam')
 
@@ -51,9 +51,10 @@ model = SAC(env=env,
             gamma=0.95,
             lr=0.001,
             alpha=0.0002,
-            update_after=1,
+            update_after=1024,
             update_every=512,
-            logger_kwargs=logger_kwargs)
+            logger_kwargs=logger_kwargs,
+            use_gpu_buffer=False)
 
 model.train(steps_per_epoch=1024, epochs=5000)
 

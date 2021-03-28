@@ -10,7 +10,7 @@ DST_DIR = "data/collect_0"
 
 N = 100000
 
-env = gym.make("PepperReachCam-v0", gui=True)
+env = gym.make("PepperReachCam-v0", gui=False)
 obs = env.reset()
 
 img_dim = env.observation_space.spaces["camera"].shape
@@ -46,7 +46,7 @@ with h5py.File(DST_HDF, "w") as f:
             pos = np.array([0, 0, 0], dtype=np.float32)
 
         cv2.imwrite(
-            "/scratch/collect_0/{}_{}_{}_{}.png".format(
+            "data/collect_0/{}_{}_{}_{}.png".format(
                 j, pos[0], pos[1], pos[2]), o["camera"])
         cv2.waitKey(1)
 

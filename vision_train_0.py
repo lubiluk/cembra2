@@ -92,7 +92,7 @@ net.to(device)
 criterion = nn.MSELoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-for epoch in range(10):  # loop over the dataset multiple times
+for epoch in range(5):  # loop over the dataset multiple times
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
@@ -117,7 +117,7 @@ for epoch in range(10):  # loop over the dataset multiple times
 
 print("Finished Training")
 
-PATH = "./data/cifar_net.pth"
+PATH = "./data/cnn_0.pth"
 torch.save(net.state_dict(), PATH)
 
 dataiter = iter(testloader)
