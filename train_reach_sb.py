@@ -38,12 +38,13 @@ model = SAC(
     gamma=0.95,
     ent_coef='auto',
     policy_kwargs=policy_kwargs,
-    train_freq=1,
+    train_freq=100,
+    gradient_steps=300
 )
 
 callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
 
-timesteps = 100
+timesteps = 5000000
 
 model.learn(timesteps)
 
@@ -57,7 +58,7 @@ env = TimeLimit(gym.make("PepperReach-v0", gui=True, dense=True),
                       max_episode_steps=100)
 model = SAC.load(log_dir + ".zip")
 obs = env.reset()
-while True:
+for _ in range(100):
     action, _states = model.predict(obs)
     obs, rewards, dones, info = env.step(action)
     env.render()
