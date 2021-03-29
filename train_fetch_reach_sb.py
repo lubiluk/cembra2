@@ -32,11 +32,11 @@ model = HER(
     policy_kwargs=policy_kwargs
 )
 
-model.learn(total_timesteps=20000)
+model.learn(total_timesteps=100000)
 model.save("data/fetch_reach_sb")
 
 obs = env.reset()
-while True:
+for _ in range(100):
     action, _states = model.predict(obs, deterministic=True)
     obs, reward, done, info = env.step(action)
     env.render()

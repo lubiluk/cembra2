@@ -123,7 +123,8 @@ class VisionWrapper(gym.ObservationWrapper):
         super(VisionWrapper, self).__init__(env)
 
         self.net = net_class()
-        self.net.load_state_dict(torch.load(model_file, map_location=torch.device('cpu')))
+        self.net.load_state_dict(
+            torch.load(model_file, map_location=torch.device('cpu')))
         self.net.eval()
 
         with torch.no_grad():
@@ -132,7 +133,8 @@ class VisionWrapper(gym.ObservationWrapper):
             cam_dim = self.net(obs).shape[1]
 
         cam_pose_dim = self.observation_space.spaces["camera_pose"].shape[0]
-        joints_state_dim = self.observation_space.spaces["joints_state"].shape[0]
+        joints_state_dim = self.observation_space.spaces["joints_state"].shape[
+            0]
 
         self.observation_space = spaces.Box(-np.inf,
                                             np.inf,
@@ -152,3 +154,39 @@ class VisionWrapper(gym.ObservationWrapper):
         print(img_feat)
 
         return torch.cat((joints_state, cam_pose, img_feat))
+
+
+class BaselinifyWrapper(gym.ObservationWrapper):
+    def __init__(self, env):
+        super(BaselinifyWrapper, self).__init__(env)
+
+        self.img_size = (1, 120, 160)
+        self.observation_space = camera = gym.spaces.Box(
+            0.0,
+            1.0,
+            shape=(2, 120, 160),
+            dtype=np.float32,
+        )
+
+        self.transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Grayscale(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, ), (0.5, ))
+        ])
+
+    def observation(self, obs):
+        """what happens to each observation"""
+
+        # Convert image to grayscale
+        img = obs["camera"]
+        img = self.transform(img)
+
+        joints_state = obs['joints_state']
+        cam_pose = obs['camera_pose']
+        zeros = np.zeros(img.shape[1:])
+        zeros[:joints_state.shape[0], 0] = joints_state
+        zeros[joints_state.shape[0]:joints_state.shape[0] + cam_pose.shape[0],
+              0] = cam_pose
+
+        return np.concatenate([img, np.expand_dims(zeros, axis=0)])
