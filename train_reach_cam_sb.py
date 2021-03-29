@@ -29,7 +29,8 @@ policy_kwargs = dict(activation_fn=th.nn.ReLU,
                      features_extractor_class=CustomCNN,
                      features_extractor_kwargs=dict(features_dim=16,
                                                     linear_dim=16,
-                                                    n_channels=1))
+                                                    n_channels=1),
+                     normalize_images=False)
 
 model = SAC(
     "MlpPolicy",
@@ -41,6 +42,7 @@ model = SAC(
     learning_starts=1000,
     gamma=0.95,
     ent_coef='auto',
+    target_entropy=0.0001,
     policy_kwargs=policy_kwargs,
     train_freq=1,
 )

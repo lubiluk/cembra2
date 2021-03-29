@@ -13,13 +13,13 @@ from stable_baselines3.common.results_plotter import plot_results
 
 from utils.callbacks import SaveOnBestTrainingRewardCallback
 from utils.extractors import CustomCNN
-from utils.wrappers import BaselinifyWrapper
+from utils.wrappers import DepthWrapper
 
 log_dir = "./data/reach_depth_sb"
 
 os.makedirs(log_dir, exist_ok=True)
 
-env = BaselinifyWrapper(
+env = DepthWrapper(
     TimeLimit(gym.make("PepperReachDepth-v0", gui=True, dense=True),
               max_episode_steps=100))
 env = Monitor(env, log_dir)
@@ -29,7 +29,8 @@ policy_kwargs = dict(activation_fn=th.nn.ReLU,
                      features_extractor_class=CustomCNN,
                      features_extractor_kwargs=dict(features_dim=16,
                                                     linear_dim=16,
-                                                    n_channels=1))
+                                                    n_channels=1),
+                     normalize_images=False)
 
 model = SAC(
     "MlpPolicy",
@@ -41,6 +42,7 @@ model = SAC(
     learning_starts=1000,
     gamma=0.95,
     ent_coef='auto',
+    target_entropy=0.0001,
     policy_kwargs=policy_kwargs,
     train_freq=1,
 )

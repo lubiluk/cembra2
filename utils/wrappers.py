@@ -5,7 +5,6 @@ from gym.wrappers import TimeLimit
 import numpy as np
 import torch
 import torchvision.transforms as transforms
-import cv2
 
 
 class DoneOnSuccessWrapper(gym.Wrapper):
@@ -170,8 +169,8 @@ class BaselinifyWrapper(gym.ObservationWrapper):
         )
 
         self.transform = transforms.Compose([
-            # transforms.ToPILImage(),
-            # transforms.Grayscale(),
+            transforms.ToPILImage(),
+            transforms.Grayscale(),
             transforms.ToTensor(),
             transforms.Normalize((0.5, ), (0.5, ))
         ])
@@ -179,8 +178,34 @@ class BaselinifyWrapper(gym.ObservationWrapper):
     def observation(self, obs):
         """what happens to each observation"""
 
-        cv2.imshow("", obs["camera"])
-        cv2.waitKey()
+        # Convert image to grayscale
+        img = obs["camera"]
+        img = self.transform(img)
+
+        joints_state = obs['joints_state']
+        cam_pose = obs['camera_pose']
+        zeros = np.zeros(img.shape[1:])
+        zeros[:joints_state.shape[0], 0] = joints_state
+        zeros[joints_state.shape[0]:joints_state.shape[0] + cam_pose.shape[0],
+              0] = cam_pose
+
+        return np.concatenate([img, np.expand_dims(zeros, axis=0)])
+        
+
+class DepthWrapper(gym.ObservationWrapper):
+    def __init__(self, env):
+        super(DepthWrapper, self).__init__(env)
+
+        self.img_size = (1, 120, 160)
+        self.observation_space = camera = gym.spaces.Box(
+            0.0,
+            1.0,
+            shape=(2, 120, 160),
+            dtype=np.float32,
+        )
+
+    def observation(self, obs):
+        """what happens to each observation"""
 
         # Convert image to grayscale
         img = obs["camera"].astype(np.float32)

@@ -25,6 +25,7 @@ env = Monitor(env, log_dir)
 policy_kwargs = dict(
     activation_fn=th.nn.ReLU,
     net_arch=[128, 128],
+    normalize_images=False
 )
 
 model = SAC(
@@ -38,9 +39,7 @@ model = SAC(
     gamma=0.95,
     ent_coef='auto',
     policy_kwargs=policy_kwargs,
-    train_freq=100,
-    gradient_steps=300
-)
+    train_freq=1)
 
 callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
 
