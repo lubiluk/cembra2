@@ -57,7 +57,7 @@ plot_results([log_dir], timesteps, results_plotter.X_TIMESTEPS,
              "SAC PepperReach")
 plt.show()
 
-env = TimeLimit(gym.make("PepperReach-v0", gui=True, dense=True),
+env = TimeLimit(gym.make("PepperReachCam-v0", gui=True, dense=True),
                 max_episode_steps=100)
 model = SAC.load(log_dir + ".zip")
 obs = env.reset()
