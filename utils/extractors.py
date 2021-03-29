@@ -15,7 +15,8 @@ class CustomCNN(BaseFeaturesExtractor):
                  linear_dim: int,
                  features_dim: int = 256,
                  n_channels: int = 1):
-        super(CustomCNN, self).__init__(observation_space, features_dim + linear_dim)
+        super(CustomCNN, self).__init__(observation_space,
+                                        features_dim + linear_dim)
 
         self.linear_dim = linear_dim
         self.n_channels = n_channels
@@ -26,10 +27,10 @@ class CustomCNN(BaseFeaturesExtractor):
         self.cnn = nn.Sequential(
             nn.Conv2d(1, 6, kernel_size=8, stride=4, padding=0),
             nn.ReLU(),
-            nn.MaxPool2d(2,2),
+            nn.MaxPool2d(2, 2),
             nn.Conv2d(6, 16, kernel_size=4, stride=2, padding=0),
             nn.ReLU(),
-            nn.MaxPool2d(2,2),
+            nn.MaxPool2d(2, 2),
             nn.Flatten(),
         )
 
@@ -39,12 +40,11 @@ class CustomCNN(BaseFeaturesExtractor):
             cam_obs = self._get_camera_obs(obs)
             n_flatten = self.cnn(cam_obs).shape[1]
 
-        self.linear = nn.Sequential(
-            nn.Linear(n_flatten, features_dim), nn.ReLU())
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim),
+                                    nn.ReLU())
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
-        cam = self.linear(
-            self.cnn(self._get_camera_obs(observations)))
+        cam = self.linear(self.cnn(self._get_camera_obs(observations)))
         lin = self._get_linear_obs(observations)
 
         cat = th.cat((cam, lin), dim=1)

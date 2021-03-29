@@ -5,6 +5,7 @@ from gym.wrappers import TimeLimit
 import numpy as np
 import torch
 import torchvision.transforms as transforms
+import cv2
 
 
 class DoneOnSuccessWrapper(gym.Wrapper):
@@ -169,8 +170,8 @@ class BaselinifyWrapper(gym.ObservationWrapper):
         )
 
         self.transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Grayscale(),
+            # transforms.ToPILImage(),
+            # transforms.Grayscale(),
             transforms.ToTensor(),
             transforms.Normalize((0.5, ), (0.5, ))
         ])
@@ -178,9 +179,13 @@ class BaselinifyWrapper(gym.ObservationWrapper):
     def observation(self, obs):
         """what happens to each observation"""
 
+        cv2.imshow("", obs["camera"])
+        cv2.waitKey()
+
         # Convert image to grayscale
-        img = obs["camera"]
-        img = self.transform(img)
+        img = obs["camera"].astype(np.float32)
+        img = (img - 65535 / 2) / 65535
+        img = np.expand_dims(img, axis=0)
 
         joints_state = obs['joints_state']
         cam_pose = obs['camera_pose']
