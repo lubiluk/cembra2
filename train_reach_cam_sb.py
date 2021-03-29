@@ -35,7 +35,7 @@ model = SAC(
     "MlpPolicy",
     env,
     verbose=1,
-    buffer_size=1000000,
+    buffer_size=100000,
     batch_size=256,
     learning_rate=0.001,
     learning_starts=1000,
@@ -47,7 +47,7 @@ model = SAC(
 
 callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
 
-timesteps = 100
+timesteps = 1000_000
 
 model.learn(timesteps)
 
