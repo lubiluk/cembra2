@@ -89,7 +89,7 @@ class TorchifyWrapper(gym.ObservationWrapper):
 
         obs_spaces = dict(
             camera=gym.spaces.Box(
-                0.0,
+                -1.0,
                 1.0,
                 shape=self.img_size,
                 dtype=np.float32,
@@ -162,7 +162,7 @@ class BaselinifyWrapper(gym.ObservationWrapper):
 
         self.img_size = (1, 120, 160)
         self.observation_space = camera = gym.spaces.Box(
-            0.0,
+            -1.0,
             1.0,
             shape=(2, 120, 160),
             dtype=np.float32,
@@ -198,7 +198,7 @@ class DepthWrapper(gym.ObservationWrapper):
 
         self.img_size = (1, 120, 160)
         self.observation_space = camera = gym.spaces.Box(
-            0.0,
+            -1.0,
             1.0,
             shape=(2, 120, 160),
             dtype=np.float32,

@@ -25,7 +25,7 @@ env = DepthWrapper(
 env = Monitor(env, log_dir)
 
 policy_kwargs = dict(activation_fn=th.nn.ReLU,
-                     net_arch=[128, 128],
+                     net_arch=[64, 64],
                      features_extractor_class=CustomCNN,
                      features_extractor_kwargs=dict(features_dim=16,
                                                     linear_dim=16,
@@ -38,11 +38,10 @@ model = SAC(
     verbose=1,
     buffer_size=100000,
     batch_size=256,
-    learning_rate=0.001,
+    learning_rate=0.0003,
     learning_starts=1000,
     gamma=0.95,
     ent_coef='auto',
-    target_entropy=0.0001,
     policy_kwargs=policy_kwargs,
     train_freq=1,
 )
