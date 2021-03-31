@@ -17,7 +17,7 @@ best_save_path = "./data/reach_depth_sb_best"
 os.makedirs(log_dir, exist_ok=True)
 
 env = DepthWrapper(
-    TimeLimit(gym.make("PepperReachDepth-v0", gui=True, dense=True),
+    TimeLimit(gym.make("PepperReachDepth-v0", gui=False, dense=True),
               max_episode_steps=100))
 
 eval_env = DepthWrapper(
