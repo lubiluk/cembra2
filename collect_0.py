@@ -4,9 +4,18 @@ import numpy as np
 import cv2
 import h5py
 from algos.common.utils import combined_shape
+from pathlib import Path
 
 DST_HDF = "data/collect_0.hdf5"
 DST_DIR = "data/collect_0"
+
+dir = Path(DST_DIR)
+
+dir.mkdir(exist_ok=True)
+
+# Clear old data from dir if exists
+for child in dir.glob('*'):
+    child.unlink()
 
 N = 100000
 
@@ -27,6 +36,7 @@ with h5py.File(DST_HDF, "w") as f:
                                 combined_shape(N, lin_dim),
                                 dtype='f')
     pos_dset = f.create_dataset("object_position", (N, 3), dtype='f')
+    cpos_dset = f.create_dataset("camera_pose", (N, 7), dtype='f')
 
     for j in range(N):
         action = np.random.sample(10) * 2 - 1
@@ -35,24 +45,18 @@ with h5py.File(DST_HDF, "w") as f:
         img = o["camera"]
         lin = o["joints_state"]
         pos = i["object_position"]
-
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, lower_range, upper_range)
+        cpos = o["camera_pose"]
 
         cv2.imshow("camera", img)
-        cv2.imshow('mask', mask)
-
-        if mask.max() == 0:
-            pos = np.array([0, 0, 0], dtype=np.float32)
-
         cv2.imwrite(
-            "data/collect_0/{}_{}_{}_{}.png".format(
-                j, pos[0], pos[1], pos[2]), o["camera"])
+            DST_DIR + "/{}_{}_{}_{}.png".format(j, pos[0], pos[1], pos[2]),
+            o["camera"])
         cv2.waitKey(1)
 
-        img_dset[j] = o["camera"]
-        lin_dset[j] = o["joints_state"]
-        pos_dset[j] = i["object_position"]
+        img_dset[j] = img
+        lin_dset[j] = lin
+        pos_dset[j] = pos
+        cpos_dset[j] = cpos
 
         if d:
             env.reset()
