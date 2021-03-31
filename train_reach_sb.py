@@ -2,25 +2,24 @@ import os
 
 import gym
 import gym_pepper
-import matplotlib.pyplot as plt
 import torch as th
-import torch.nn as nn
 from gym.wrappers.time_limit import TimeLimit
-from stable_baselines3 import HER, SAC
-from stable_baselines3.common import results_plotter
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.results_plotter import plot_results
+from stable_baselines3 import SAC
+from stable_baselines3.common.callbacks import EvalCallback
 
-from utils.callbacks import SaveOnBestTrainingRewardCallback
 from utils.wrappers import DoneOnSuccessWrapper
 
-log_dir = "./data/reach_sb"
+log_dir = "./data/reach_sb_log"
+save_path = "./data/reach_sb"
+best_save_path = "./data/reach_sb_best"
 
 os.makedirs(log_dir, exist_ok=True)
 
 env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
                 max_episode_steps=100)
-env = Monitor(env, log_dir)
+
+eval_env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
+                max_episode_steps=100)
 
 policy_kwargs = dict(
     activation_fn=th.nn.ReLU,
@@ -32,30 +31,33 @@ model = SAC(
     "MlpPolicy",
     env,
     verbose=1,
-    buffer_size=1000000,
-    batch_size=256,
-    learning_rate=0.001,
+    buffer_size=1_000_000,
+    batch_size=512,
+    learning_rate=0.0003,
     learning_starts=1000,
     gamma=0.95,
     ent_coef='auto',
     policy_kwargs=policy_kwargs,
     train_freq=1)
 
-callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
+eval_callback = EvalCallback(eval_env,
+                             best_model_save_path=best_save_path,
+                             log_path=log_dir,
+                             eval_freq=500,
+                             deterministic=True,
+                             render=False)
 
-timesteps = 5000000
+timesteps = 1_000_000
 
-model.learn(timesteps)
+model.learn(timesteps, callback=eval_callback)
 
-model.save(log_dir)
+model.save(save_path)
 
-plot_results([log_dir], timesteps, results_plotter.X_TIMESTEPS,
-             "SAC PepperReach")
-plt.show()
-
+# Evaluate
+env.close()
 env = TimeLimit(gym.make("PepperReach-v0", gui=True, dense=True),
                       max_episode_steps=100)
-model = SAC.load(log_dir + ".zip")
+model = SAC.load(save_path)
 obs = env.reset()
 for _ in range(100):
     action, _states = model.predict(obs)
