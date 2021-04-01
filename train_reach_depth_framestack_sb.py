@@ -7,6 +7,7 @@ from gym.wrappers.time_limit import TimeLimit
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env.vec_frame_stack import VecFrameStack
+from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
 
 from utils.extractors import CustomCNN
 from utils.wrappers import DepthWrapper
@@ -17,24 +18,21 @@ best_save_path = "./data/reach_depth_sb_best"
 
 os.makedirs(log_dir, exist_ok=True)
 
-env = VecFrameStack(DepthWrapper(
-    TimeLimit(gym.make("PepperReachDepth-v0", gui=False, dense=True),
-              max_episode_steps=100)), n_stack=8, channels_order="first")
-
-eval_env = DepthWrapper(
+def env_fn():
+    return DepthWrapper(
     TimeLimit(gym.make("PepperReachDepth-v0", gui=False, dense=True),
               max_episode_steps=100))
 
+env = VecFrameStack(DummyVecEnv([env_fn]), n_stack=8, channels_order="first")
+
+eval_env = VecFrameStack(DummyVecEnv([env_fn]), n_stack=8, channels_order="first")
+
 policy_kwargs = dict(activation_fn=th.nn.ReLU,
-                     net_arch=[64, 64],
-                     features_extractor_class=CustomCNN,
-                     features_extractor_kwargs=dict(features_dim=16,
-                                                    linear_dim=16,
-                                                    n_channels=1),
+                     net_arch=[64, 64, 64],
                      normalize_images=False)
 
 model = SAC(
-    "MlpPolicy",
+    "CnnPolicy",
     env,
     verbose=1,
     buffer_size=100_000,
@@ -62,9 +60,7 @@ model.save(save_path)
 
 # Evaluate
 env.close()
-env = DepthWrapper(
-    TimeLimit(gym.make("PepperReachDepth-v0", gui=True, dense=True),
-              max_episode_steps=100))
+env = VecFrameStack(DummyVecEnv([env_fn]), n_stack=8, channels_order="first")
 model = SAC.load(save_path)
 obs = env.reset()
 for _ in range(100):
