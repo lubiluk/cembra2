@@ -9,7 +9,7 @@ from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env.vec_frame_stack import VecFrameStack
 from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
 
-from utils.extractors import CustomCNN
+from utils.extractors import StackCNN
 from utils.wrappers import DepthWrapper
 
 log_dir = "./data/reach_depth_sb_log"
@@ -29,10 +29,14 @@ eval_env = VecFrameStack(DummyVecEnv([env_fn]), n_stack=8, channels_order="first
 
 policy_kwargs = dict(activation_fn=th.nn.ReLU,
                      net_arch=[64, 64, 64],
-                     normalize_images=False)
+                     normalize_images=False,
+                     features_extractor_class=StackCNN,
+                     features_extractor_kwargs=dict(features_dim=16,
+                                                    linear_dim=16,
+                                                    n_channels=1),)
 
 model = SAC(
-    "CnnPolicy",
+    "MlpPolicy",
     env,
     verbose=1,
     buffer_size=100_000,
