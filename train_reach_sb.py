@@ -23,7 +23,7 @@ eval_env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
 
 policy_kwargs = dict(
     activation_fn=th.nn.ReLU,
-    net_arch=[128, 128],
+    net_arch=[256, 256, 256],
     normalize_images=False
 )
 
@@ -32,7 +32,7 @@ model = SAC(
     env,
     verbose=1,
     buffer_size=1_000_000,
-    batch_size=512,
+    batch_size=256,
     learning_rate=0.0003,
     learning_starts=1000,
     gamma=0.95,
