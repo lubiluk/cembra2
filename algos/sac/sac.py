@@ -2,6 +2,7 @@ from copy import deepcopy
 import itertools
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.optim import Adam
 import gym
 import time
@@ -24,7 +25,8 @@ class SAC:
                  gamma=0.99,
                  polyak=0.995,
                  lr=1e-3,
-                 alpha=0.2,
+                 ent_coef="auto",
+                 target_entropy="auto",
                  batch_size=100,
                  start_steps=10000,
                  update_after=1000,
@@ -103,7 +105,7 @@ class SAC:
 
             lr (float): Learning rate (used for both policy and value learning).
 
-            alpha (float): Entropy regularization coefficient. (Equivalent to 
+            ent_coef (float): Entropy regularization coefficient. (Equivalent to 
                 inverse of reward scale in the original SAC paper.)
 
             batch_size (int): Minibatch size for SGD.
@@ -171,7 +173,6 @@ class SAC:
         self.env = env
         self.test_env = env
         self.gamma = gamma
-        self.alpha = alpha
         self.polyak = polyak
         self.num_test_episodes = num_test_episodes
         self.max_ep_len = max_ep_len
@@ -181,6 +182,12 @@ class SAC:
         self.num_updates = num_updates
         self.save_freq = save_freq
         self.batch_size = batch_size
+        self.target_entropy = target_entropy
+        self.log_ent_coef = None  # type: Optional[th.Tensor]
+        # Entropy coefficient / Entropy temperature
+        # Inverse of the reward scale
+        self.ent_coef = ent_coef
+        self.ent_coef_optimizer = None
 
         act_dim = env.action_space.shape[0]
 
@@ -225,6 +232,36 @@ class SAC:
         self.logger.setup_pytorch_saver(self.ac)
         self.best_logger.setup_pytorch_saver(self.ac)
 
+        # Target entropy is used when learning the entropy coefficient
+        if self.target_entropy == "auto":
+            # automatically set target entropy if needed
+            self.target_entropy = -np.prod(self.env.action_space.shape).astype(np.float32)
+        else:
+            # Force conversion
+            # this will also throw an error for unexpected string
+            self.target_entropy = float(self.target_entropy)
+
+        # The entropy coefficient or entropy can be learned automatically
+        # see Automating Entropy Adjustment for Maximum Entropy RL section
+        # of https://arxiv.org/abs/1812.05905
+        if isinstance(self.ent_coef, str) and self.ent_coef.startswith("auto"):
+            # Default initial value of ent_coef when learned
+            init_value = 1.0
+            if "_" in self.ent_coef:
+                init_value = float(self.ent_coef.split("_")[1])
+                assert init_value > 0.0, "The initial value of ent_coef must be greater than 0"
+
+            # Note: we optimize the log of the entropy coeff which is slightly different from the paper
+            # as discussed in https://github.com/rail-berkeley/softlearning/issues/37
+            self.log_ent_coef = torch.log(torch.ones(1, device=comp_device) * init_value).requires_grad_(True)
+            self.ent_coef_optimizer = torch.optim.Adam([self.log_ent_coef], lr=lr)
+            self.ent_coef = torch.tensor(float(init_value)).to(comp_device)
+        else:
+            # Force conversion to float
+            # this will throw an error if a malformed string (different from 'auto')
+            # is passed
+            self.ent_coef = torch.tensor(float(self.ent_coef)).to(comp_device)
+
     # Set up function for computing SAC Q-losses
     def compute_loss_q(self, data):
         o, a, r, o2, d = data["obs"], data["act"], data["rew"], data[
@@ -243,12 +280,12 @@ class SAC:
             q2_pi_targ = self.ac_targ.q2(o2, a2)
             q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
             backup = r + self.gamma * (1 - d) * (q_pi_targ -
-                                                 self.alpha * logp_a2)
+                                                 self.ent_coef * logp_a2)
 
         # MSE loss against Bellman backup
-        loss_q1 = ((q1 - backup)**2).mean()
-        loss_q2 = ((q2 - backup)**2).mean()
-        loss_q = loss_q1 + loss_q2
+        loss_q1 = F.mse_loss(q1, backup)
+        loss_q2 = F.mse_loss(q2, backup)
+        loss_q = 0.5  * (loss_q1 + loss_q2)
 
         # Useful info for logging
         q_info = dict(q1_vals=q1.detach().cpu().numpy(),
@@ -265,12 +302,21 @@ class SAC:
         q_pi = torch.min(q1_pi, q2_pi)
 
         # Entropy-regularized policy loss
-        loss_pi = (self.alpha * logp_pi - q_pi).mean()
+        loss_pi = (self.ent_coef * logp_pi - q_pi).mean()
 
         # Useful info for logging
         pi_info = dict(log_pi=logp_pi.detach().cpu().numpy())
 
-        return loss_pi, pi_info
+        return loss_pi, logp_pi, pi_info
+
+    def compute_loss_ent_coef(self, logp_pi):
+        # Important: detach the variable from the graph
+        # so we don't change it with other losses
+        # see https://github.com/rail-berkeley/softlearning/issues/60
+        ent_coef = torch.exp(self.log_ent_coef.detach())
+        ent_coef_loss = -(self.log_ent_coef * (logp_pi + self.target_entropy).detach()).mean()
+        
+        return ent_coef_loss, ent_coef
 
     def update(self, data):
         # First run one gradient descent step for Q1 and Q2
@@ -289,7 +335,7 @@ class SAC:
 
         # Next run one gradient descent step for pi.
         self.pi_optimizer.zero_grad()
-        loss_pi, pi_info = self.compute_loss_pi(data)
+        loss_pi, logp_pi, pi_info = self.compute_loss_pi(data)
         loss_pi.backward()
         self.pi_optimizer.step()
 
@@ -308,6 +354,16 @@ class SAC:
                 # params, as opposed to "mul" and "add", which would make new tensors.
                 p_targ.data.mul_(self.polyak)
                 p_targ.data.add_((1 - self.polyak) * p.data)
+
+        # Optimize entropy coefficient, also called
+        # entropy temperature or alpha in the paper
+        if self.ent_coef_optimizer is not None:
+            ent_coef_loss, ent_coef = self.compute_loss_ent_coef(logp_pi)
+            self.ent_coef_optimizer.zero_grad()
+            ent_coef_loss.backward()
+            self.ent_coef_optimizer.step()
+            self.ent_coef = ent_coef
+            self.logger.store(ent_coef_loss=ent_coef_loss.item())
 
     def get_action(self, o, deterministic=False):
         a = self.ac.act(o, deterministic)
@@ -395,8 +451,8 @@ class SAC:
                 self.test_agent()
 
                 test_ep_return = self.logger.get_stats("test_ep_return")[0]
-                test_success_rate = self.logger.get_stats(
-                    "test_success_rate")[0]
+                # test_success_rate = self.logger.get_stats(
+                #     "test_success_rate")[0]
 
                 # Log info about epoch
                 self.logger.log_tabular("epoch", epoch)
@@ -410,6 +466,9 @@ class SAC:
                 self.logger.log_tabular("total_timesteps", t)
                 self.logger.log_tabular("loss_pi", average_only=True)
                 self.logger.log_tabular("loss_q", average_only=True)
+                if self.ent_coef_optimizer is not None:
+                    self.logger.log_tabular("ent_coef_loss", average_only=True)
+                self.logger.log_tabular("ent_coef", self.ent_coef.item())
                 self.logger.log_tabular("time_elapsed",
                                         time.time() - start_time)
                 self.logger.log_tabular("iteration_time", average_only=True)
@@ -419,9 +478,9 @@ class SAC:
                     self.logger.log("\nStopping early\n")
                     break
 
-                if stop_success_rate is not None and test_success_rate >= stop_success_rate:
-                    self.logger.log("\nStopping early\n")
-                    break
+                # if stop_success_rate is not None and test_success_rate >= stop_success_rate:
+                #     self.logger.log("\nStopping early\n")
+                #     break
 
                 if abort_after_epoch is not None and epoch >= abort_after_epoch and test_ep_return < abort_return_threshold:
                     self.logger.log("\nAborting ineffectivse training\n")

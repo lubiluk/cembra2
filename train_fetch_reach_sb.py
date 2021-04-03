@@ -26,7 +26,6 @@ model = HER(
     learning_starts=1000,
     gamma=0.95,
     ent_coef='auto',
-    target_entropy=0.0001,
     n_sampled_goal=4,
     goal_selection_strategy='future',
     policy_kwargs=policy_kwargs
