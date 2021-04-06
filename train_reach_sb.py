@@ -23,7 +23,7 @@ eval_env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
 
 policy_kwargs = dict(
     activation_fn=th.nn.ReLU,
-    net_arch=[256, 256, 256],
+    net_arch=[256, 256],
     normalize_images=False
 )
 
