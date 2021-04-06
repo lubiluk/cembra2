@@ -82,6 +82,9 @@ class TimeFeatureWrapper(gym.Wrapper):
 
 
 class TorchifyWrapper(gym.ObservationWrapper):
+    """ 
+    A wrapper that normalizes camera observations 
+    """
     def __init__(self, env):
         super(TorchifyWrapper, self).__init__(env)
 
@@ -157,6 +160,10 @@ class VisionWrapper(gym.ObservationWrapper):
 
 
 class BaselinifyWrapper(gym.ObservationWrapper):
+    """
+    A wrapper that normalizes camera observation and turns linear
+    observatins into image channel.
+    """
     def __init__(self, env):
         super(BaselinifyWrapper, self).__init__(env)
 
