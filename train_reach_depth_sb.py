@@ -40,7 +40,7 @@ model = SAC(
     "MlpPolicy",
     env,
     verbose=1,
-    buffer_size=1_000_000,
+    buffer_size=100_000,
     batch_size=256,
     learning_rate=0.0003,
     learning_starts=1024,
