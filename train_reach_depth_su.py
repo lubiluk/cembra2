@@ -8,36 +8,50 @@ from algos.sac import core_cam
 from algos.common import replay_buffer_cam
 from gym.wrappers.time_limit import TimeLimit
 from utils.wrappers import TorchifyWrapper
-# from gym_recording.wrappers import TraceRecordingWrappe
 
 torch.backends.cudnn.benchmark = True
 torch.autograd.set_detect_anomaly(False)
 torch.autograd.profiler.profile(enabled=False)
 
+env = TorchifyWrapper(
+    TimeLimit(gym.make("PepperReachCam-v0", gui=False, dense=True),
+              max_episode_steps=100))
+
+
 class Extractor(nn.Module):
     def __init__(self):
         super(Extractor, self).__init__()
-        self.conv1 = nn.Conv2d(1, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 27 * 37, 64)
+
+        obs_space = env.observation_space.spaces["camera"]
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(obs_space.shape[0], 8, kernel_size=8, stride=4, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(8, 16, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(16, 16, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        with torch.no_grad():
+            obs = torch.as_tensor(
+                obs_space.sample()
+                [None]).float()
+            n_flatten = self.cnn(obs).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, 64), nn.ReLU())
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 27 * 37)
-        x = F.relu(self.fc1(x))
+        x = self.linear(self.cnn(x))
         return x
 
 
-env = TorchifyWrapper(
-        TimeLimit(gym.make("PepperReachCam-v0", gui=False, dense=True),
-                  max_episode_steps=100))
-
-ac_kwargs = dict(hidden_sizes=[64, 64, 64],
+ac_kwargs = dict(hidden_sizes=[256, 256],
                  activation=nn.ReLU,
                  extractor_module=Extractor)
-rb_kwargs = dict(size=1000000)
+rb_kwargs = dict(size=40000)
 
 logger_kwargs = dict(output_dir='data/reach_cam', exp_name='reach_cam')
 
@@ -49,12 +63,11 @@ model = SAC(env=env,
             max_ep_len=100,
             batch_size=256,
             gamma=0.95,
-            lr=0.001,
-            alpha=0.0002,
-            update_after=1024,
+            lr=0.0003,
+            update_after=512,
             update_every=512,
             logger_kwargs=logger_kwargs,
-            use_gpu_buffer=False)
+            use_gpu_buffer=True)
 
 model.train(steps_per_epoch=1024, epochs=5000)
 

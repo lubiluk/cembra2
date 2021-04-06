@@ -15,7 +15,7 @@ best_save_path = "./data/reach_sb_best"
 
 os.makedirs(log_dir, exist_ok=True)
 
-env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
+env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True, head_motion=False),
                 max_episode_steps=100)
 
 eval_env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),

@@ -52,7 +52,7 @@ eval_callback = EvalCallback(eval_env,
                              eval_freq=500,
                              deterministic=True,
                              render=False)
-timesteps = 1000_000
+timesteps = 1_000_000
 
 model.learn(timesteps, callback=eval_callback)
 
