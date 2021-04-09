@@ -18,7 +18,7 @@ os.makedirs(log_dir, exist_ok=True)
 env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True, head_motion=False),
                 max_episode_steps=100)
 
-eval_env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
+eval_env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True, head_motion=False),
                 max_episode_steps=100)
 
 policy_kwargs = dict(
@@ -38,12 +38,13 @@ model = SAC(
     gamma=0.95,
     ent_coef='auto',
     policy_kwargs=policy_kwargs,
-    train_freq=1)
+    train_freq=1,
+    device="cpu")
 
 eval_callback = EvalCallback(eval_env,
                              best_model_save_path=best_save_path,
                              log_path=log_dir,
-                             eval_freq=500,
+                             eval_freq=1000,
                              deterministic=True,
                              render=False)
 
@@ -55,7 +56,7 @@ model.save(save_path)
 
 # Evaluate
 env.close()
-env = TimeLimit(gym.make("PepperReach-v0", gui=True, dense=True),
+env = TimeLimit(gym.make("PepperReach-v0", gui=True, dense=True, head_motion=False),
                       max_episode_steps=100)
 model = SAC.load(save_path)
 obs = env.reset()

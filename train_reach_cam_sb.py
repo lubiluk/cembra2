@@ -21,7 +21,7 @@ best_save_path = "./data/reach_cam_sb_best"
 os.makedirs(log_dir, exist_ok=True)
 
 env = BaselinifyWrapper(
-    TimeLimit(gym.make("PepperReachCam-v0", gui=False, dense=True),
+    TimeLimit(gym.make("PepperReachCam-v0", gui=True, dense=True),
               max_episode_steps=100))
 
 eval_env = BaselinifyWrapper(
@@ -47,7 +47,8 @@ model = SAC("MlpPolicy",
             ent_coef='auto',
             policy_kwargs=policy_kwargs,
             train_freq=512,
-            gradient_steps=-1)
+            gradient_steps=-1,
+            device="cpu")
 
 eval_callback = EvalCallback(eval_env,
                              best_model_save_path=best_save_path,
