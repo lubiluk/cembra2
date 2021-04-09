@@ -164,7 +164,7 @@ class ReplayBuffer:
                         "Unsupported selection_strategy: {}".format(
                             self.selection_strategy))
 
-                sel_agoal = ep["obs"]["achieved_goal"][sel_idx]
+                sel_agoal = ep["obs2"]["achieved_goal"][sel_idx]
                 info = ep['info'][sel_idx]
                 done = ep['done'][sel_idx]
                 np_sel_agoal = sel_agoal.cpu().numpy()
@@ -172,5 +172,6 @@ class ReplayBuffer:
                 rew = self.env.compute_reward(np_agoal, np_sel_agoal, info)
 
                 obs["desired_goal"] = sel_agoal
+                obs2["desired_goal"] = sel_agoal
 
                 self.store(obs, act, rew, obs2, done, info)

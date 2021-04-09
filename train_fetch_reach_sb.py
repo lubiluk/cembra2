@@ -31,7 +31,7 @@ model = HER(
     policy_kwargs=policy_kwargs
 )
 
-model.learn(total_timesteps=100000)
+model.learn(total_timesteps=30000)
 model.save("data/fetch_reach_sb")
 
 obs = env.reset()
