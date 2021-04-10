@@ -38,8 +38,7 @@ model = SAC(
     gamma=0.95,
     ent_coef='auto',
     policy_kwargs=policy_kwargs,
-    train_freq=1,
-    device="cpu")
+    train_freq=1)
 
 eval_callback = EvalCallback(eval_env,
                              best_model_save_path=best_save_path,

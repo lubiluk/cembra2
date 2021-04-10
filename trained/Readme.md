@@ -1,34 +1,20 @@
 
-### 0/
-train_0.py
-
-SAC
-```
-hidden_sizes=[64, 64, 64]
-
-env = TimeLimit(gym.make("PepperReach-v0", gui=False, dense=True),
-            max_episode_steps=100)
-
-model.train(steps_per_epoch=1000, epochs=1000)
-```
-Success rate up to 1.0
-
-### 0/
-train_1.py
-
-SAC
-```
-hidden_sizes=[64, 64, 64]
-
-env = TimeLimit(gym.make("PepperPush-v0", gui=False), max_episode_steps=100)
-alpha=0.0002
-model.train(steps_per_epoch=1000, epochs=1000)
-```
-Success rate 0.1
-
 ### vision_0.pth
 vision_train_0.py
 CNN extractor from cnn_0
 saved weights only
 returns x, y, z of the object or 0,0,0 if none
 79% Accuracy
+
+### reach_sb.zip
+
+train_reach_sb.py
+net_arch=[256, 256]
+buffer_size=1_000_000,
+batch_size=256,
+learning_rate=0.0003,
+learning_starts=1000,
+gamma=0.95,
+ent_coef='auto',
+
+91% success rate
